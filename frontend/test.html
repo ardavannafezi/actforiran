@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ActForIran - System Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background: #0F0F0F;
+            color: #FFFFFF;
+            padding: 20px;
+            direction: rtl;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #DC2626;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .test-section {
+            background: #1A1A1A;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+        
+        .test-section h3 {
+            color: #EF4444;
+            margin-bottom: 15px;
+        }
+        
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        
+        .success {
+            background: #064E3B;
+            color: #10B981;
+        }
+        
+        .error {
+            background: #7F1D1D;
+            color: #F87171;
+        }
+        
+        .info {
+            background: #1E3A8A;
+            color: #60A5FA;
+        }
+        
+        button {
+            background: #DC2626;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Vazirmatn', sans-serif;
+            font-weight: 600;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #B91C1C;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        pre {
+            background: #000;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+        
+        .status-green { background: #10B981; }
+        .status-red { background: #EF4444; }
+        .status-yellow { background: #F59E0B; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 ActForIran - System Test</h1>
+        
+        <div class="controls">
+            <button onclick="runAllTests()">اجرای تمام تست‌ها</button>
+            <button onclick="testBackendHealth()">تست سلامت Backend</button>
+            <button onclick="testDatabaseConnection()">تست اتصال Database</button>
+            <button onclick="testAPIs()">تست API ها</button>
+            <button onclick="clearResults()">پاک کردن نتایج</button>
+        </div>
+        
+        <div class="test-section">
+            <h3><span class="status-indicator" id="backend-status"></span>Backend Connection</h3>
+            <div id="backend-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3><span class="status-indicator" id="database-status"></span>Database & Sample Data</h3>
+            <div id="database-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3><span class="status-indicator" id="api-status"></span>API Endpoints</h3>
+            <div id="api-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3><span class="status-indicator" id="frontend-status"></span>Frontend Functionality</h3>
+            <div id="frontend-results"></div>
+            <button onclick="testFrontendFeatures()">تست عملکرد Frontend</button>
+        </div>
+        
+        <div class="test-section" style="text-align: center;">
+            <h3>🚀 Quick Actions</h3>
+            <button onclick="window.open('index.html', '_blank')">باز کردن صفحه اصلی</button>
+            <button onclick="window.open('admin.html', '_blank')">باز کردن پنل مدیریت</button>
+            <button onclick="window.open('http://localhost:8000/api/docs', '_blank')">مستندات API</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        function addResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const result = document.createElement('div');
+            result.className = `test-result ${type}`;
+            result.textContent = message;
+            container.appendChild(result);
+        }
+        
+        function updateStatus(statusId, success) {
+            const indicator = document.getElementById(statusId);
+            indicator.className = `status-indicator ${success ? 'status-green' : 'status-red'}`;
+        }
+        
+        function clearResults() {
+            ['backend-results', 'database-results', 'api-results', 'frontend-results'].forEach(id => {
+                document.getElementById(id).innerHTML = '';
+            });
+            ['backend-status', 'database-status', 'api-status', 'frontend-status'].forEach(id => {
+                document.getElementById(id).className = 'status-indicator';
+            });
+        }
+        
+        async function testBackendHealth() {
+            addResult('backend-results', 'در حال تست اتصال به backend...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('backend-results', `✅ Backend سلامت است: ${data.message}`, 'success');
+                    updateStatus('backend-status', true);
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                addResult('backend-results', `❌ Backend در دسترس نیست: ${error.message}`, 'error');
+                addResult('backend-results', 'برای شروع backend: cd backend && python -m uvicorn main:app --reload', 'info');
+                updateStatus('backend-status', false);
+                return false;
+            }
+        }
+        
+        async function testDatabaseConnection() {
+            addResult('database-results', 'در حال تست اتصال database...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/test/connectivity`);
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('database-results', `✅ Database متصل است`, 'success');
+                    
+                    // Test sample data
+                    const sampleResponse = await fetch(`${API_BASE}/api/test/sample-data`);
+                    if (sampleResponse.ok) {
+                        const sampleData = await sampleResponse.json();
+                        addResult('database-results', `✅ Sample data موجود است:`, 'success');
+                        addResult('database-results', `   • کشورها: ${sampleData.countries}`, 'info');
+                        addResult('database-results', `   • گیرندگان: ${sampleData.recipients}`, 'info');
+                        addResult('database-results', `   • موضوعات: ${sampleData.topics}`, 'info');
+                        addResult('database-results', `   • مدیران: ${sampleData.admins}`, 'info');
+                    }
+                    
+                    updateStatus('database-status', true);
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                addResult('database-results', `❌ مشکل در database: ${error.message}`, 'error');
+                addResult('database-results', 'برای راه‌اندازی database: cd backend && python -c "from database import init_db; init_db()"', 'info');
+                updateStatus('database-status', false);
+                return false;
+            }
+        }
+        
+        async function testAPIs() {
+            addResult('api-results', 'در حال تست API endpoints...', 'info');
+            
+            const endpoints = [
+                { url: '/api/v1/countries', name: 'Countries API' },
+                { url: '/api/v1/recipients', name: 'Recipients API' },
+                { url: '/api/v1/topics', name: 'Topics API' }
+            ];
+            
+            let successCount = 0;
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${API_BASE}${endpoint.url}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const count = Object.values(data)[0]?.length || 0;
+                        addResult('api-results', `✅ ${endpoint.name}: ${count} آیتم`, 'success');
+                        successCount++;
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    addResult('api-results', `❌ ${endpoint.name}: ${error.message}`, 'error');
+                }
+            }
+            
+            updateStatus('api-status', successCount === endpoints.length);
+            return successCount === endpoints.length;
+        }
+        
+        async function testFrontendFeatures() {
+            addResult('frontend-results', 'در حال تست عملکرد frontend...', 'info');
+            
+            // Test if main elements exist
+            const testElements = [
+                { selector: '#countrySelect', name: 'انتخابگر کشور' },
+                { selector: '#recipientsList', name: 'لیست گیرندگان' },
+                { selector: '#topicsList', name: 'لیست موضوعات' },
+                { selector: '#generateEmail', name: 'دکمه تولید ایمیل' }
+            ];
+            
+            let elementsFound = 0;
+            
+            // Open main page and test
+            const mainWindow = window.open('index.html', '_blank');
+            
+            setTimeout(() => {
+                try {
+                    testElements.forEach(test => {
+                        const element = mainWindow.document.querySelector(test.selector);
+                        if (element) {
+                            addResult('frontend-results', `✅ ${test.name} موجود است`, 'success');
+                            elementsFound++;
+                        } else {
+                            addResult('frontend-results', `❌ ${test.name} یافت نشد`, 'error');
+                        }
+                    });
+                    
+                    updateStatus('frontend-status', elementsFound === testElements.length);
+                    
+                    if (elementsFound === testElements.length) {
+                        addResult('frontend-results', '✅ تمام عناصر frontend موجود هستند', 'success');
+                    }
+                } catch (error) {
+                    addResult('frontend-results', `❌ خطا در تست frontend: ${error.message}`, 'error');
+                    updateStatus('frontend-status', false);
+                }
+            }, 2000);
+        }
+        
+        async function runAllTests() {
+            clearResults();
+            addResult('backend-results', '🚀 شروع تست‌های سیستمی...', 'info');
+            
+            const backendOk = await testBackendHealth();
+            if (!backendOk) {
+                addResult('backend-results', 'Backend باید اول راه‌اندازی شود!', 'error');
+                return;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const databaseOk = await testDatabaseConnection();
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const apisOk = await testAPIs();
+            
+            // Final result
+            if (backendOk && databaseOk && apisOk) {
+                addResult('backend-results', '🎉 تمام تست‌ها با موفقیت اجرا شدند!', 'success');
+                addResult('backend-results', '✅ سیستم آماده استفاده است', 'success');
+            } else {
+                addResult('backend-results', '⚠️ برخی تست‌ها ناموفق بودند', 'error');
+            }
+        }
+        
+        // Auto-run tests on page load
+        window.onload = function() {
+            setTimeout(runAllTests, 1000);
+        };
+    </script>
+</body>
+</html>

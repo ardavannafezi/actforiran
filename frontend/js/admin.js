@@ -1,4 +1,4 @@
-const API_BASE = 'https://back.actforiran.org';
+const API_BASE = 'http://localhost:8000';
 const TOKEN_KEY = 'actforiran_admin_token';
 
 const loginView = document.getElementById('loginView');

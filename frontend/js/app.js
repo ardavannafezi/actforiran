@@ -1,4 +1,4 @@
-const API_BASE = 'https://back.actforiran.org';
+const API_BASE = 'http://localhost:8000';
 
 const state = {
   step: 1,
@@ -9,7 +9,8 @@ const state = {
   selectedRecipients: new Set(),
   selectedTopics: new Set(),
   isResident: null,
-  mailto: ''
+  mailto: '',
+  connectionStatus: 'offline'
 };
 
 const stepper = document.getElementById('stepper');
@@ -21,11 +22,55 @@ const emailSubject = document.getElementById('emailSubject');
 const emailBody = document.getElementById('emailBody');
 const generateEmail = document.getElementById('generateEmail');
 const openGmail = document.getElementById('openGmail');
+const connectionStatus = document.getElementById('connectionStatus');
 
 const startCampaigns = document.getElementById('startCampaigns');
 const startCountry = document.getElementById('startCountry');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
+
+// Connection status management
+function updateConnectionStatus(status, message) {
+  state.connectionStatus = status;
+  if (connectionStatus) {
+    connectionStatus.className = `connection-status ${status}`;
+    const statusText = connectionStatus.querySelector('.status-text');
+    if (statusText) {
+      statusText.textContent = message;
+    }
+  }
+}
+
+// Check backend connection
+async function checkBackendConnection() {
+  updateConnectionStatus('connecting', 'در حال اتصال...');
+  
+  try {
+    const response = await fetch(`${API_BASE}/health`, { 
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    
+    if (response.ok) {
+      updateConnectionStatus('online', 'متصل');
+      showNotification('اتصال به سرور برقرار شد', 'success');
+      return true;
+    } else {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (error) {
+    updateConnectionStatus('offline', 'قطع شده');
+    console.error('Backend connection failed:', error);
+    
+    // Show helpful message
+    showNotification('اتصال به سرور برقرار نیست', 'error');
+    setTimeout(() => {
+      showNotification('برای راه‌اندازی سرور: cd backend && python -m uvicorn main:app --reload', 'info');
+    }, 2000);
+    
+    return false;
+  }
+}
 
 // Persian number conversion
 function toPersianNumber(num) {
@@ -269,6 +314,11 @@ function updateTopicCount() {
 }
 
 async function loadCountries() {
+  if (state.connectionStatus !== 'online') {
+    const connected = await checkBackendConnection();
+    if (!connected) return;
+  }
+  
   try {
     const response = await fetch(`${API_BASE}/api/v1/countries`);
     if (!response.ok) throw new Error('Failed to load countries');
@@ -295,6 +345,11 @@ async function loadRecipients(countryCode) {
 }
 
 async function loadTopics() {
+  if (state.connectionStatus !== 'online') {
+    const connected = await checkBackendConnection();
+    if (!connected) return;
+  }
+  
   try {
     const response = await fetch(`${API_BASE}/api/v1/topics`);
     if (!response.ok) throw new Error('Failed to load topics');
@@ -310,6 +365,11 @@ async function loadTopics() {
 }
 
 async function generateEmailContent() {
+  if (state.connectionStatus !== 'online') {
+    showNotification('اتصال به سرور برقرار نیست', 'error');
+    return;
+  }
+  
   const payload = {
     country_code: state.selectedCountry,
     recipient_ids: Array.from(state.selectedRecipients),
@@ -317,27 +377,58 @@ async function generateEmailContent() {
     is_resident: state.isResident === 'yes'
   };
 
-  const response = await fetch(`${API_BASE}/api/v1/generate-email`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/generate-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-  if (!response.ok) {
-    throw new Error('Failed to generate email');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to generate email');
+    }
+
+    const data = await response.json();
+    emailSubject.value = data.subject || '';
+    emailBody.value = data.body || '';
+    state.mailto = data.mailto_link || '';
+    
+    // Enable the Gmail button
+    openGmail.disabled = !state.mailto;
+    
+    // Add some visual feedback
+    emailSubject.style.animation = 'fadeInUp 0.5s ease';
+    emailBody.style.animation = 'fadeInUp 0.5s ease 0.1s both';
+    
+    showNotification('ایمیل با موفقیت تولید شد!', 'success');
+  } catch (error) {
+    console.error('Email generation error:', error);
+    
+    // If AI service is not configured, show sample email
+    if (error.message.includes('AI service') || error.message.includes('OPENAI')) {
+      emailSubject.value = 'فراخوان فوری: حمایت از حقوق بشر در ایران';
+      emailBody.value = `جناب آقای/خانم [نام گیرنده],
+
+من به عنوان یک شهروند جهانی نگران وضعیت حقوق بشر در ایران، از شما می‌خواهم که:
+
+• محکومیت رسمی نقض حقوق بشر در ایران
+• حمایت از آزادی بیان و حق تظاهرات مسالمت‌آمیز
+• اعمال تحریم‌های هدفمند علیه مقامات مسئول
+
+مردم ایران به حمایت بین‌المللی نیاز دارند.
+
+با احترام،
+[نام شما]`;
+      
+      state.mailto = `mailto:${Array.from(state.recipients.filter(r => state.selectedRecipients.has(r.id))).map(r => r.email_address).join(',')}?subject=${encodeURIComponent(emailSubject.value)}&body=${encodeURIComponent(emailBody.value)}`;
+      
+      openGmail.disabled = false;
+      showNotification('نمونه ایمیل نمایش داده شد (سرویس هوش مصنوعی فعال نیست)', 'info');
+    } else {
+      throw error;
+    }
   }
-
-  const data = await response.json();
-  emailSubject.value = data.subject || '';
-  emailBody.value = data.body || '';
-  state.mailto = data.mailto_link || '';
-  
-  // Enable the Gmail button
-  openGmail.disabled = !state.mailto;
-  
-  // Add some visual feedback
-  emailSubject.style.animation = 'fadeInUp 0.5s ease';
-  emailBody.style.animation = 'fadeInUp 0.5s ease 0.1s both';
 }
 
 openGmail.addEventListener('click', () => {
@@ -378,16 +469,97 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Initialize the application
 (async function init() {
+  updateConnectionStatus('connecting', 'در حال اتصال...');
+  
   try {
-    await Promise.all([
-      loadCountries(),
-      loadTopics()
-    ]);
-    setStep(1);
-    showNotification('سیستم آماده و فعال است.', 'success');
+    const connected = await checkBackendConnection();
+    
+    if (connected) {
+      await Promise.all([
+        loadCountries(),
+        loadTopics()
+      ]);
+      setStep(1);
+      showNotification('سیستم آماده و فعال است.', 'success');
+    } else {
+      showNotification('سرور در دسترس نیست. لطفاً سرور را راه‌اندازی کنید.', 'error');
+      // Show test page button
+      setTimeout(() => {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          padding: 16px 24px;
+          background: var(--accent);
+          color: white;
+          border-radius: 12px;
+          font-weight: 600;
+          z-index: 1000;
+          cursor: pointer;
+        `;
+        notification.innerHTML = `
+          <div>برای تست سیستم کلیک کنید</div>
+          <div style="font-size: 12px; margin-top: 4px;">صفحه تست و راهنمای راه‌اندازی</div>
+        `;
+        notification.onclick = () => window.open('test.html', '_blank');
+        document.body.appendChild(notification);
+      }, 2000);
+    }
   } catch (error) {
     console.error('Initialization error:', error);
     showNotification('خطا در راه‌اندازی سیستم.', 'error');
   }
 })();
+
+// Add connection retry on user interaction
+document.addEventListener('click', async () => {
+  if (state.connectionStatus === 'offline') {
+    await checkBackendConnection();
+  }
+});
+
+// Debug menu - click logo 5 times
+let logoClickCount = 0;
+document.querySelector('.logo').addEventListener('click', () => {
+  logoClickCount++;
+  if (logoClickCount >= 5) {
+    logoClickCount = 0;
+    showDebugMenu();
+  }
+  setTimeout(() => logoClickCount = 0, 3000);
+});
+
+function showDebugMenu() {
+  const debugMenu = document.createElement('div');
+  debugMenu.style.cssText = `
+    position: fixed;
+    top: 50%;
+    right: 50%;
+    transform: translate(50%, -50%);
+    background: #1A1A1A;
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 20px;
+    z-index: 10000;
+    min-width: 300px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  `;
+  
+  debugMenu.innerHTML = `
+    <h3 style="color: var(--accent); margin-bottom: 15px;">🛠️ Debug Menu</h3>
+    <button onclick="checkBackendConnection()" style="width: 100%; margin: 5px 0; padding: 8px; background: var(--accent); color: white; border: none; border-radius: 6px;">تست اتصال Backend</button>
+    <button onclick="window.open('test.html', '_blank')" style="width: 100%; margin: 5px 0; padding: 8px; background: var(--accent); color: white; border: none; border-radius: 6px;">باز کردن صفحه تست</button>
+    <button onclick="window.open('${API_BASE}/api/docs', '_blank')" style="width: 100%; margin: 5px 0; padding: 8px; background: var(--accent); color: white; border: none; border-radius: 6px;">API Documentation</button>
+    <button onclick="console.log('State:', state)" style="width: 100%; margin: 5px 0; padding: 8px; background: #666; color: white; border: none; border-radius: 6px;">Log Current State</button>
+    <button onclick="this.parentElement.remove()" style="width: 100%; margin: 10px 0 0 0; padding: 8px; background: #666; color: white; border: none; border-radius: 6px;">بستن</button>
+    <div style="font-size: 12px; color: #888; margin-top: 10px;">
+      وضعیت: ${state.connectionStatus}<br>
+      Countries: ${state.countries.length}<br>
+      Topics: ${state.topics.length}
+    </div>
+  `;
+  
+  document.body.appendChild(debugMenu);
+}
 
