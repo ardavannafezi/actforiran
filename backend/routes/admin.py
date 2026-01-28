@@ -62,6 +62,10 @@ async def admin_login(payload: AdminLoginRequest, db: Session = Depends(get_db))
     admin = db.query(Administrator).filter(Administrator.email == payload.email).first()
     if not admin or not verify_password(payload.password, admin.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    
+    # Check if admin is active (super_admin is always allowed)
+    if admin.role != "super_admin" and hasattr(admin, 'is_active') and not admin.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
 
     admin.last_login = datetime.utcnow()
     db.add(admin)

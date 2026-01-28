@@ -41,6 +41,7 @@ function showNotification(message, type = 'info') {
 // AUTHENTICATION
 // ============================================
 async function login(email, password) {
+    console.log('🔐 Attempting login for:', email);
     try {
         const response = await fetch(`${API_BASE}/api/v1/admin/auth/login`, {
             method: 'POST',
@@ -48,12 +49,16 @@ async function login(email, password) {
             body: JSON.stringify({ email, password })
         });
         
+        console.log('📡 Login response status:', response.status);
+        
         if (!response.ok) {
             const error = await response.json();
+            console.error('❌ Login error:', error);
             throw new Error(error.detail || 'Login failed');
         }
         
         const data = await response.json();
+        console.log('✅ Login successful, token received');
         token = data.access_token;
         sessionStorage.setItem('adminToken', token);
         
@@ -61,8 +66,8 @@ async function login(email, password) {
         showNotification('ورود موفقیت‌آمیز', 'success');
         
     } catch (error) {
-        console.error('Login error:', error);
-        showNotification('ایمیل یا رمز عبور اشتباه است', 'error');
+        console.error('💥 Login error:', error);
+        showNotification(error.message || 'ایمیل یا رمز عبور اشتباه است', 'error');
     }
 }
 
@@ -101,6 +106,7 @@ function showLogin() {
 }
 
 function showDashboard() {
+    console.log('📊 Showing dashboard');
     loginContainer.style.display = 'none';
     adminLayout.classList.add('active');
     
@@ -115,6 +121,7 @@ function showDashboard() {
 // DASHBOARD DATA
 // ============================================
 async function loadDashboardData() {
+    console.log('📥 Loading dashboard data');
     await Promise.all([
         loadStats(),
         loadCountries(),
