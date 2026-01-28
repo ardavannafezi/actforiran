@@ -52,8 +52,7 @@ def seed_defaults(db):
     super_admin = Administrator(
         email="admin@actforiran.org",
         password_hash=get_password_hash("admin123"),
-        role="super_admin",
-        is_active=True
+        role="super_admin"
     )
     db.add(super_admin)
     db.commit()
