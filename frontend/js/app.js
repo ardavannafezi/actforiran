@@ -1,224 +1,208 @@
-const apiBase = document.body.dataset.apiBase || "https://back.actforiran.org";
+const API_BASE = 'https://back.actforiran.org';
 
 const state = {
+  step: 1,
   countries: [],
   recipients: [],
   topics: [],
-  selectedCountry: null,
+  selectedCountry: '',
+  selectedRecipients: new Set(),
+  selectedTopics: new Set(),
+  isResident: null,
+  mailto: ''
 };
 
-const ui = {
-  countrySelect: document.getElementById("countrySelect"),
-  recipientsList: document.getElementById("recipientsList"),
-  topicsList: document.getElementById("topicsList"),
-  generateButton: document.getElementById("generateButton"),
-  notice: document.getElementById("notice"),
-  preview: document.getElementById("preview"),
-  subjectOutput: document.getElementById("subjectOutput"),
-  bodyOutput: document.getElementById("bodyOutput"),
-  gmailButton: document.getElementById("gmailButton"),
-};
+const stepper = document.getElementById('stepper');
+const campaignPanel = document.getElementById('campaignPanel');
+const countrySelect = document.getElementById('countrySelect');
+const recipientsList = document.getElementById('recipientsList');
+const topicsList = document.getElementById('topicsList');
+const emailSubject = document.getElementById('emailSubject');
+const emailBody = document.getElementById('emailBody');
+const openGmail = document.getElementById('openGmail');
 
-function showNotice(message) {
-  ui.notice.textContent = message;
-  ui.notice.style.display = "block";
-}
+const startCampaigns = document.getElementById('startCampaigns');
+const startCountry = document.getElementById('startCountry');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
 
-function clearNotice() {
-  ui.notice.style.display = "none";
-  ui.notice.textContent = "";
-}
+startCampaigns.addEventListener('click', () => {
+  campaignPanel.classList.add('active');
+  stepper.classList.remove('active');
+  stepper.setAttribute('aria-hidden', 'true');
+  campaignPanel.setAttribute('aria-hidden', 'false');
+});
 
-async function fetchJSON(path, options = {}) {
-  const response = await fetch(`${apiBase}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+startCountry.addEventListener('click', () => {
+  campaignPanel.classList.remove('active');
+  stepper.classList.add('active');
+  stepper.setAttribute('aria-hidden', 'false');
+  campaignPanel.setAttribute('aria-hidden', 'true');
+  setStep(1);
+});
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Request failed with status ${response.status}`);
+prevBtn.addEventListener('click', () => {
+  if (state.step > 1) {
+    setStep(state.step - 1);
   }
+});
 
-  return response.json();
-}
-
-function renderCountryOptions() {
-  ui.countrySelect.innerHTML = `<option value="">Select a country</option>`;
-  state.countries.forEach((country) => {
-    const option = document.createElement("option");
-    option.value = country.code;
-    option.textContent = country.name;
-    ui.countrySelect.appendChild(option);
-  });
-}
-
-function renderRecipients() {
-  ui.recipientsList.innerHTML = "";
-
-  if (!state.recipients.length) {
-    ui.recipientsList.innerHTML = `<p class="helper">No recipients available yet for this country.</p>`;
+nextBtn.addEventListener('click', async () => {
+  if (state.step === 1 && !state.selectedCountry) {
+    alert('لطفا کشور را انتخاب کنید.');
+    return;
+  }
+  if (state.step === 2 && state.selectedRecipients.size === 0) {
+    alert('حداقل یک مخاطب انتخاب کنید.');
+    return;
+  }
+  if (state.step === 3 && state.isResident === null) {
+    alert('لطفا وضعیت سکونت را انتخاب کنید.');
+    return;
+  }
+  if (state.step === 4 && state.selectedTopics.size === 0) {
+    alert('حداقل یک موضوع انتخاب کنید.');
     return;
   }
 
-  state.recipients.forEach((recipient) => {
-    const wrapper = document.createElement("label");
-    wrapper.className = "checkbox-item";
+  if (state.step === 4) {
+    await generateEmail();
+  }
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = recipient.id;
+  if (state.step < 5) {
+    setStep(state.step + 1);
+  }
+});
 
-    const text = document.createElement("span");
-    text.innerHTML = `<strong>${recipient.full_name}</strong><br>${recipient.display_title}`;
+countrySelect.addEventListener('change', async (event) => {
+  state.selectedCountry = event.target.value;
+  if (!state.selectedCountry) return;
+  await loadRecipients(state.selectedCountry);
+});
 
-    wrapper.appendChild(checkbox);
-    wrapper.appendChild(text);
-    ui.recipientsList.appendChild(wrapper);
+function setStep(step) {
+  state.step = step;
+  document.querySelectorAll('.panel').forEach(panel => {
+    panel.classList.toggle('active', Number(panel.dataset.panel) === step);
+  });
+  document.querySelectorAll('.step').forEach(stepEl => {
+    const stepNum = Number(stepEl.dataset.step);
+    stepEl.classList.toggle('active', stepNum === step);
+    stepEl.classList.toggle('completed', stepNum < step);
+  });
+  prevBtn.disabled = step === 1;
+  nextBtn.textContent = step === 5 ? 'پایان' : 'بعدی';
+}
+
+function renderRecipients() {
+  recipientsList.innerHTML = state.recipients.map(recipient => {
+    const id = recipient.id;
+    return `
+      <label class="list-item">
+        <input type="checkbox" data-id="${id}">
+        <span>${recipient.full_name} — ${recipient.display_title}</span>
+      </label>
+    `;
+  }).join('');
+
+  recipientsList.querySelectorAll('input[type="checkbox"]').forEach(box => {
+    box.addEventListener('change', () => {
+      const id = Number(box.dataset.id);
+      if (box.checked) {
+        state.selectedRecipients.add(id);
+      } else {
+        state.selectedRecipients.delete(id);
+      }
+    });
   });
 }
 
 function renderTopics() {
-  ui.topicsList.innerHTML = "";
+  topicsList.innerHTML = state.topics.map(topic => {
+    const id = topic.id;
+    return `
+      <label class="list-item">
+        <input type="checkbox" data-id="${id}">
+        <span>${topic.display_title}</span>
+      </label>
+    `;
+  }).join('');
 
-  if (!state.topics.length) {
-    ui.topicsList.innerHTML = `<p class="helper">No topics have been approved yet.</p>`;
-    return;
-  }
-
-  state.topics.forEach((topic) => {
-    const wrapper = document.createElement("label");
-    wrapper.className = "checkbox-item";
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = topic.id;
-
-    const text = document.createElement("span");
-    text.innerHTML = `<strong>${topic.display_title}</strong><br>${topic.description || ""}`;
-
-    wrapper.appendChild(checkbox);
-    wrapper.appendChild(text);
-    ui.topicsList.appendChild(wrapper);
+  topicsList.querySelectorAll('input[type="checkbox"]').forEach(box => {
+    box.addEventListener('change', () => {
+      const id = Number(box.dataset.id);
+      if (box.checked) {
+        state.selectedTopics.add(id);
+      } else {
+        state.selectedTopics.delete(id);
+      }
+    });
   });
 }
 
-function getSelectedValues(container) {
-  return Array.from(container.querySelectorAll("input[type='checkbox']:checked")).map((el) =>
-    Number(el.value)
-  );
-}
-
-function getResidency() {
-  const selected = document.querySelector("input[name='residency']:checked");
-  if (!selected) {
-    return null;
-  }
-  return selected.value === "yes";
-}
-
 async function loadCountries() {
-  const data = await fetchJSON("/api/v1/countries");
+  const response = await fetch(`${API_BASE}/api/v1/countries`);
+  const data = await response.json();
   state.countries = data.countries || [];
-  renderCountryOptions();
+  countrySelect.innerHTML = '<option value="">انتخاب کشور...</option>' +
+    state.countries.map(c => `<option value="${c.code}">${c.name}</option>`).join('');
+}
+
+async function loadRecipients(countryCode) {
+  const response = await fetch(`${API_BASE}/api/v1/recipients?country_code=${countryCode}`);
+  const data = await response.json();
+  state.recipients = data.recipients || [];
+  state.selectedRecipients.clear();
+  renderRecipients();
 }
 
 async function loadTopics() {
-  const data = await fetchJSON("/api/v1/topics");
+  const response = await fetch(`${API_BASE}/api/v1/topics`);
+  const data = await response.json();
   state.topics = data.topics || [];
   renderTopics();
 }
 
-async function loadRecipients(countryCode) {
-  const data = await fetchJSON(`/api/v1/recipients?country_code=${countryCode}`);
-  state.recipients = data.recipients || [];
-  renderRecipients();
+async function generateEmail() {
+  const payload = {
+    country_code: state.selectedCountry,
+    recipient_ids: Array.from(state.selectedRecipients),
+    topic_ids: Array.from(state.selectedTopics),
+    is_resident: state.isResident === 'yes'
+  };
+
+  const response = await fetch(`${API_BASE}/api/v1/generate-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    alert('خطا در تولید ایمیل. لطفا دوباره تلاش کنید.');
+    return;
+  }
+
+  const data = await response.json();
+  emailSubject.value = data.subject || '';
+  emailBody.value = data.body || '';
+  state.mailto = data.mailto_link || '';
+  openGmail.disabled = !state.mailto;
 }
 
-async function handleGenerate() {
-  clearNotice();
-  ui.preview.style.display = "none";
-  ui.gmailButton.disabled = true;
-
-  const countryCode = ui.countrySelect.value;
-  if (!countryCode) {
-    showNotice("Please select a country.");
-    return;
-  }
-
-  const recipientIds = getSelectedValues(ui.recipientsList);
-  if (!recipientIds.length) {
-    showNotice("Please choose at least one recipient.");
-    return;
-  }
-
-  const topicIds = getSelectedValues(ui.topicsList);
-  if (!topicIds.length) {
-    showNotice("Please choose at least one topic.");
-    return;
-  }
-
-  const isResident = getResidency();
-  if (isResident === null) {
-    showNotice("Please tell us if you are a resident of the selected country.");
-    return;
-  }
-
-  ui.generateButton.disabled = true;
-  ui.generateButton.textContent = "Generating...";
-
-  try {
-    const data = await fetchJSON("/api/v1/generate-email", {
-      method: "POST",
-      body: JSON.stringify({
-        country_code: countryCode,
-        recipient_ids: recipientIds,
-        topic_ids: topicIds,
-        is_resident: isResident,
-      }),
-    });
-
-    ui.subjectOutput.textContent = data.subject || "";
-    ui.bodyOutput.textContent = data.body || "";
-
-    ui.gmailButton.onclick = () => {
-      if (data.mailto_link) {
-        window.location.href = data.mailto_link;
-      }
-    };
-    ui.gmailButton.disabled = !data.mailto_link;
-
-    ui.preview.style.display = "block";
-  } catch (error) {
-    showNotice(`Failed to generate email: ${error.message}`);
-    ui.gmailButton.disabled = true;
-  } finally {
-    ui.generateButton.disabled = false;
-    ui.generateButton.textContent = "Generate Email";
-  }
-}
-
-ui.countrySelect.addEventListener("change", async (event) => {
-  clearNotice();
-  const code = event.target.value;
-  if (!code) {
-    state.recipients = [];
-    renderRecipients();
-    return;
-  }
-  try {
-    await loadRecipients(code);
-  } catch (error) {
-    showNotice(`Failed to load recipients: ${error.message}`);
+openGmail.addEventListener('click', () => {
+  if (state.mailto) {
+    window.location.href = state.mailto;
   }
 });
 
-ui.generateButton.addEventListener("click", handleGenerate);
+document.querySelectorAll('input[name="resident"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    state.isResident = radio.value;
+  });
+});
 
 (async function init() {
-  try {
-    await Promise.all([loadCountries(), loadTopics()]);
-  } catch (error) {
-    showNotice(`Failed to load initial data: ${error.message}`);
-  }
+  await loadCountries();
+  await loadTopics();
+  setStep(1);
 })();
