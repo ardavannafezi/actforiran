@@ -49,19 +49,19 @@ prevBtn.addEventListener('click', () => {
 
 nextBtn.addEventListener('click', async () => {
   if (state.step === 1 && !state.selectedCountry) {
-    alert('لطفا کشور را انتخاب کنید.');
+    alert('Please select a country.');
     return;
   }
   if (state.step === 2 && state.selectedRecipients.size === 0) {
-    alert('حداقل یک مخاطب انتخاب کنید.');
+    alert('Please select at least one recipient.');
     return;
   }
   if (state.step === 3 && state.isResident === null) {
-    alert('لطفا وضعیت سکونت را انتخاب کنید.');
+    alert('Please choose your residency status.');
     return;
   }
   if (state.step === 4 && state.selectedTopics.size === 0) {
-    alert('حداقل یک موضوع انتخاب کنید.');
+    alert('Please select at least one topic.');
     return;
   }
 
@@ -94,7 +94,7 @@ function setStep(step) {
     stepEl.classList.toggle('completed', stepNum < step);
   });
   prevBtn.disabled = step === 1;
-  nextBtn.textContent = step === 5 ? 'پایان' : 'بعدی';
+  nextBtn.textContent = step === 5 ? 'Finish' : 'Next';
 }
 
 function renderRecipients() {
@@ -147,7 +147,7 @@ async function loadCountries() {
   const response = await fetch(`${API_BASE}/api/v1/countries`);
   const data = await response.json();
   state.countries = data.countries || [];
-  countrySelect.innerHTML = '<option value="">انتخاب کشور...</option>' +
+  countrySelect.innerHTML = '<option value="">Choose a country...</option>' +
     state.countries.map(c => `<option value="${c.code}">${c.name}</option>`).join('');
 }
 
@@ -181,7 +181,7 @@ async function generateEmail() {
   });
 
   if (!response.ok) {
-    alert('خطا در تولید ایمیل. لطفا دوباره تلاش کنید.');
+    alert('Failed to generate the email. Please try again.');
     return;
   }
 

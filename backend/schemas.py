@@ -69,3 +69,69 @@ class AdminMeResponse(BaseModel):
     id: int
     email: EmailStr
     role: str
+
+
+class RecipientRoleOut(BaseModel):
+    id: int
+    name: str
+    is_active: bool
+
+
+class RecipientRoleCreate(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+
+
+class PoliticalRecipientCreate(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=255)
+    email_address: EmailStr
+    role_id: int
+    custom_title: Optional[str] = Field(None, max_length=255)
+    country_code: str = Field(..., min_length=3, max_length=3)
+
+
+class PoliticalRecipientUpdate(BaseModel):
+    full_name: Optional[str] = Field(None, min_length=2, max_length=255)
+    email_address: Optional[EmailStr] = None
+    role_id: Optional[int] = None
+    custom_title: Optional[str] = Field(None, max_length=255)
+    country_code: Optional[str] = Field(None, min_length=3, max_length=3)
+    is_active: Optional[bool] = None
+
+
+class PoliticalRecipientAdminOut(BaseModel):
+    id: int
+    full_name: str
+    email_address: EmailStr
+    role_id: int
+    role_name: str
+    custom_title: Optional[str] = None
+    country_code: str
+    country_name: str
+    approval_status: str
+    is_active: bool
+
+
+class AdvocacyTopicCreate(BaseModel):
+    slug: str = Field(..., min_length=2, max_length=100)
+    display_title: str = Field(..., min_length=2, max_length=255)
+    description: Optional[str] = None
+
+
+class AdvocacyTopicUpdate(BaseModel):
+    slug: Optional[str] = Field(None, min_length=2, max_length=100)
+    display_title: Optional[str] = Field(None, min_length=2, max_length=255)
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class AdvocacyTopicAdminOut(BaseModel):
+    id: int
+    slug: str
+    display_title: str
+    description: Optional[str] = None
+    approval_status: str
+    is_active: bool
+
+
+class ApprovalRequest(BaseModel):
+    reason: Optional[str] = Field(None, max_length=500)
