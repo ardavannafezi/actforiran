@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تست API | ActForIran</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .test-header h1 {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+        
+        .test-section {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .test-section h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-success { background: var(--success); }
+        .status-error { background: var(--error); }
+        .status-pending { background: var(--warning); animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .endpoint-test {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .endpoint-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .endpoint-method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        .method-get { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .method-post { background: rgba(59, 130, 246, 0.2); color: #3B82F6; }
+        .method-put { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .method-delete { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+        
+        .endpoint-url {
+            font-family: monospace;
+            color: var(--text-secondary);
+            font-size: 14px;
+            direction: ltr;
+            text-align: left;
+        }
+        
+        .test-result {
+            background: var(--bg-dark);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            margin-top: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .test-result pre {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-all;
+            direction: ltr;
+            text-align: left;
+        }
+        
+        .test-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .summary-card {
+            display: flex;
+            justify-content: space-around;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .summary-item {
+            text-align: center;
+        }
+        
+        .summary-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .summary-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .test-input {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .test-input input {
+            flex: 1;
+        }
+        
+        .btn-icon-only {
+            padding: 12px;
+            min-width: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">🧪</span>
+                    <div class="logo-text">
+                        <strong>تست API</strong>
+                        <small>ActForIran Test Suite</small>
+                    </div>
+                </div>
+                <nav class="nav">
+                    <a href="index.html" class="nav-link">صفحه اصلی</a>
+                    <a href="admin.html" class="nav-link">پنل مدیریت</a>
+                </nav>
+            </div>
+        </header>
+
+        <div class="test-container">
+            <!-- Test Header -->
+            <div class="test-header">
+                <h1>تست API های ActForIran</h1>
+                <p style="color: var(--text-secondary);">تست خودکار تمام endpoint های سیستم</p>
+            </div>
+
+            <!-- Summary -->
+            <div class="summary-card">
+                <div class="summary-item">
+                    <div class="summary-value" style="color: var(--success);" id="passedCount">۰</div>
+                    <div class="summary-label">موفق</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" style="color: var(--error);" id="failedCount">۰</div>
+                    <div class="summary-label">ناموفق</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" style="color: var(--warning);" id="pendingCount">۰</div>
+                    <div class="summary-label">در حال انجام</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="totalCount">۰</div>
+                    <div class="summary-label">کل تست‌ها</div>
+                </div>
+            </div>
+
+            <!-- Test Controls -->
+            <div class="test-controls">
+                <button class="btn btn-primary" onclick="runAllTests()">
+                    ▶️ اجرای همه تست‌ها
+                </button>
+                <button class="btn btn-secondary" onclick="runPublicTests()">
+                    🌍 تست API های عمومی
+                </button>
+                <button class="btn btn-secondary" onclick="runAdminTests()">
+                    🔐 تست API های مدیریت
+                </button>
+                <button class="btn btn-secondary" onclick="clearResults()">
+                    🗑️ پاک کردن نتایج
+                </button>
+            </div>
+
+            <!-- Health Check -->
+            <div class="test-section">
+                <h2>
+                    <span class="status-dot" id="status-health"></span>
+                    سلامت سیستم
+                </h2>
+                
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/health</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testHealth()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-health" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testRoot()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-root" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Public API -->
+            <div class="test-section">
+                <h2>
+                    <span class="status-dot" id="status-public"></span>
+                    API های عمومی
+                </h2>
+                
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/v1/countries</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testCountries()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-countries" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/v1/recipients</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testRecipients()">تست</button>
+                    </div>
+                    <div class="test-input">
+                        <input type="text" class="form-input" id="recipientCountryCode" placeholder="کد کشور (اختیاری) مثال: USA">
+                        <button class="btn btn-secondary btn-sm" onclick="testRecipientsFiltered()">تست با فیلتر</button>
+                    </div>
+                    <div class="test-result" id="result-recipients" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/v1/topics</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testTopics()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-topics" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-post">POST</span>
+                            <span class="endpoint-url">/api/v1/generate-email</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testGenerateEmail()">تست</button>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0;">
+                        این تست نیاز به داده‌های معتبر دارد (کشور، گیرندگان، موضوعات)
+                    </p>
+                    <div class="test-result" id="result-generate-email" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Admin API -->
+            <div class="test-section">
+                <h2>
+                    <span class="status-dot" id="status-admin"></span>
+                    API های مدیریت
+                </h2>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-post">POST</span>
+                            <span class="endpoint-url">/api/v1/admin/auth/login</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testAdminLogin()">تست</button>
+                    </div>
+                    <div class="test-input">
+                        <input type="email" class="form-input" id="adminEmail" placeholder="ایمیل" value="admin@actforiran.org">
+                        <input type="password" class="form-input" id="adminPassword" placeholder="رمز عبور" value="admin123">
+                    </div>
+                    <div class="test-result" id="result-admin-login" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/v1/admin/auth/me</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testAdminMe()">تست</button>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0;">
+                        نیاز به لاگین دارد
+                    </p>
+                    <div class="test-result" id="result-admin-me" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/v1/admin/roles</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testAdminRoles()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-admin-roles" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Test API (Backend Testing) -->
+            <div class="test-section">
+                <h2>
+                    <span class="status-dot" id="status-test"></span>
+                    API های تست Backend
+                </h2>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/test/connectivity</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testConnectivity()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-connectivity" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/test/sample-data</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testSampleData()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-sample-data" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/test/admin-auth</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testAdminAuth()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-admin-auth" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/test.js"></script>
+</body>
+</html>
