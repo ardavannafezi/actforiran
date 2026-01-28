@@ -7,7 +7,7 @@ A secure web platform that enables global citizens to easily send personalized, 
 - **Frontend**: Cloudflare Pages (Static HTML/CSS/JS)
 - **Backend**: Railway (Python FastAPI)
 - **Database**: Railway PostgreSQL
-- **AI**: Anthropic Claude API
+- **AI**: OpenAI API (o4-mini)
 
 ## 📋 Sprint 0 - Deployment Test
 
@@ -50,7 +50,8 @@ git push origin main
 4. **Set Environment Variables**:
    Go to your backend service → Variables tab → Add:
    ```
-   ANTHROPIC_API_KEY=your-api-key-here
+   OPENAI_API_KEY=your-api-key-here
+   OPENAI_MODEL=o4-mini
    JWT_SECRET=random-32-character-string-here
    FRONTEND_URL=https://yourdomain.org
    ENVIRONMENT=production
@@ -120,12 +121,10 @@ git push origin main
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-### Get Anthropic API Key:
-1. Go to [Anthropic Console](https://console.anthropic.com)
-2. Create account / Sign in
-3. Go to API Keys
-4. Create new key
-5. Copy and add to Railway environment variables
+### Get OpenAI API Key:
+1. Go to OpenAI API settings
+2. Create or copy an API key
+3. Add it to Railway environment variables as `OPENAI_API_KEY`
 
 ---
 
@@ -137,23 +136,23 @@ actforiran/
 │   ├── main.py                 # FastAPI app
 │   ├── requirements.txt        # Python dependencies
 │   ├── .env.example            # Environment template
-│   ├── database.py             # (Coming in Sprint 1)
-│   ├── models.py               # (Coming in Sprint 1)
-│   ├── schemas.py              # (Coming in Sprint 1)
+│   ├── database.py             # Database setup + seeding
+│   ├── models.py               # SQLAlchemy models
+│   ├── schemas.py              # Pydantic schemas
 │   ├── routes/
-│   │   ├── public.py           # (Coming in Sprint 1)
+│   │   ├── public.py           # Public endpoints
 │   │   └── admin.py            # (Coming in Sprint 2)
 │   └── services/
-│       ├── ai_service.py       # (Coming in Sprint 1)
+│       ├── ai_service.py       # OpenAI integration
 │       └── auth.py             # (Coming in Sprint 2)
 │
 └── frontend/
-    ├── index.html              # Test page (Sprint 0)
+    ├── index.html              # Public interface
     ├── admin.html              # (Coming in Sprint 2)
     ├── css/
-    │   └── style.css           # (Coming in Sprint 1)
+    │   └── style.css           # Public styles
     └── js/
-        ├── app.js              # (Coming in Sprint 1)
+        ├── app.js              # Public UI logic
         └── admin.js            # (Coming in Sprint 2)
 ```
 

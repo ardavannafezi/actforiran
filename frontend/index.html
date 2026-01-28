@@ -1,194 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iranian Advocacy Platform - Test Page</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 60px 40px;
-            max-width: 600px;
-            width: 100%;
-            text-align: center;
-        }
-
-        h1 {
-            color: #2d3748;
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-        }
-
-        .subtitle {
-            color: #718096;
-            font-size: 1.2rem;
-            margin-bottom: 40px;
-        }
-
-        .status {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #48bb78;
-            color: white;
-            border-radius: 8px;
-            font-weight: 600;
-            margin-bottom: 30px;
-        }
-
-        .info-box {
-            background: #f7fafc;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .info-box h3 {
-            color: #2d3748;
-            margin-bottom: 10px;
-        }
-
-        .info-box p {
-            color: #4a5568;
-            line-height: 1.6;
-        }
-
-        .api-test {
-            margin-top: 30px;
-            padding: 20px;
-            background: #edf2f7;
-            border-radius: 8px;
-        }
-
-        button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-            margin: 10px;
-        }
-
-        button:hover {
-            background: #5a67d8;
-        }
-
-        #apiResult {
-            margin-top: 20px;
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-            text-align: left;
-            font-family: monospace;
-            font-size: 0.9rem;
-            color: #2d3748;
-            display: none;
-        }
-
-        .links {
-            margin-top: 30px;
-        }
-
-        .links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-            margin: 0 10px;
-        }
-
-        .links a:hover {
-            text-decoration: underline;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Act for Iran | Advocacy Email Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-    <div class="container">
-        <h1>🇮🇷 Iranian Advocacy Platform</h1>
-        <p class="subtitle">Amplifying Voices for Human Rights in Iran</p>
+<body data-api-base="https://back.actforiran.org">
+  <main>
+    <section class="hero">
+      <div>
+        <span class="badge">Act for Iran</span>
+        <h1>Send a focused message that reaches the right leaders.</h1>
+        <p>
+          Choose the country, the recipients, and the issues that matter. We will craft a
+          concise, human-sounding email you can send in minutes.
+        </p>
+        <p class="helper">Your email is created in the browser and sent from your own mailbox.</p>
+      </div>
+      <div class="hero-card">
+        <h2>How it works</h2>
+        <ol class="helper">
+          <li>Select a country and recipients.</li>
+          <li>Pick the key human rights topics to highlight.</li>
+          <li>Generate a personalized email and open it in Gmail.</li>
+        </ol>
+      </div>
+    </section>
 
-        <div class="status">✅ Frontend Deployed Successfully</div>
+    <section class="section-grid">
+      <div class="card">
+        <h2>1. Choose a country</h2>
+        <label for="countrySelect">Country</label>
+        <select id="countrySelect"></select>
+        <p class="helper">We will load approved recipients for that country.</p>
+      </div>
 
-        <div class="info-box">
-            <h3>📋 Deployment Test Page</h3>
-            <p>
-                This is a test page to verify that both your frontend (Cloudflare Pages)
-                and backend (Railway) are deployed and communicating correctly.
-            </p>
+      <div class="card">
+        <h2>2. Pick recipients</h2>
+        <div id="recipientsList" class="checkbox-list"></div>
+      </div>
+
+      <div class="card">
+        <h2>3. Residency</h2>
+        <div class="radio-group">
+          <label class="radio-item">
+            <input type="radio" name="residency" value="yes">
+            Yes, I am a resident of this country
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="residency" value="no">
+            No, I am an international supporter
+          </label>
         </div>
+      </div>
 
-        <div class="info-box">
-            <h3>🎯 Mission</h3>
-            <p>
-                Enable global citizens to easily send personalized, AI-generated advocacy
-                emails to international politicians regarding human rights violations in Iran.
-            </p>
-        </div>
+      <div class="card">
+        <h2>4. Select topics</h2>
+        <div id="topicsList" class="checkbox-list"></div>
+      </div>
 
-        <div class="api-test">
-            <h3>🔌 Test Backend Connection</h3>
-            <p style="color: #4a5568; margin-bottom: 15px;">
-                Click the button below to test if the backend API is reachable:
-            </p>
-            <button onclick="testAPI()">Test Backend API</button>
-            <div id="apiResult"></div>
+      <div class="card">
+        <h2>5. Generate your email</h2>
+        <p class="helper">Limit: 5 generations per hour per IP.</p>
+        <div class="actions">
+          <button class="primary" id="generateButton">Generate Email</button>
+          <button class="secondary" id="gmailButton" type="button" disabled>Open in Gmail</button>
         </div>
+        <div id="notice" class="notice"></div>
+      </div>
+    </section>
 
-        <div class="links">
-            <a href="/admin.html">Admin Panel →</a>
-            <a href="#" onclick="alert('Full app coming soon!'); return false;">Coming Soon</a>
-        </div>
+    <section id="preview" class="preview" style="display: none;">
+      <h3>Email Preview</h3>
+      <p><strong>Subject:</strong> <span id="subjectOutput"></span></p>
+      <pre id="bodyOutput"></pre>
+    </section>
+
+    <div class="footer">
+      Built for global advocates supporting human rights in Iran.
     </div>
+  </main>
 
-    <script>
-        // Test backend API connection
-        async function testAPI() {
-            const resultDiv = document.getElementById('apiResult');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = '<p style="color: #ed8936;">⏳ Testing connection...</p>';
-
-            // Replace this with your Railway backend URL
-            const API_URL = 'https:back.actforiran.org';
-
-            try {
-                const response = await fetch(`${API_URL}/api/health`);
-                const data = await response.json();
-
-                resultDiv.innerHTML = `
-                    <p style="color: #48bb78; font-weight: bold;">✅ Backend Connected!</p>
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
-                `;
-            } catch (error) {
-                resultDiv.innerHTML = `
-                    <p style="color: #f56565; font-weight: bold;">❌ Connection Failed</p>
-                    <p>Error: ${error.message}</p>
-                    <p style="margin-top: 10px; font-size: 0.85rem;">
-                        Make sure to update the API_URL in this page with your Railway backend URL.
-                    </p>
-                `;
-            }
-        }
-    </script>
+  <script src="/js/app.js"></script>
 </body>
 </html>
