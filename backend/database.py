@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 
 from data.countries import COUNTRIES
 from data.roles import DEFAULT_RECIPIENT_ROLES
+from data.top_countries import TOP_COUNTRIES
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -57,11 +58,11 @@ def seed_defaults(db):
     db.commit()
     db.refresh(super_admin)
 
-    # Seed countries
+    # Seed countries (top 60 influential countries)
     if db.query(Country).count() == 0:
         db.bulk_insert_mappings(
             Country,
-            [{"code": code, "name": name, "is_active": True} for code, name in COUNTRIES],
+            [{"code": c["code"], "name": c["name"], "is_active": True} for c in TOP_COUNTRIES],
         )
 
     # Seed roles

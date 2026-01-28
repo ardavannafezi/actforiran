@@ -14,10 +14,12 @@ const state = {
     countries: [],
     recipients: [],
     topics: [],
+    campaigns: [],
     selectedCountry: null,
     selectedRecipients: new Set(),
     selectedTopics: new Set(),
     isResident: null,
+    selectedCampaign: null,
     generatedEmail: {
         subject: '',
         body: '',
@@ -62,30 +64,57 @@ function showNotification(message, type = 'info') {
 // STEPPER NAVIGATION
 // ============================================
 function initStepper() {
-    // Start button
-    elements.startBtn.addEventListener('click', () => {
-        document.querySelector('.hero').style.display = 'none';
-        elements.stepperContainer.classList.add('active');
-        loadCountries();
-        loadTopics();
-    });
+    console.log('🚀 ActForIran App Loaded - Safari Compatible');
+    
+    // Safari Fix: Use onclick instead of addEventListener
+    if (elements.startBtn) {
+        elements.startBtn.onclick = function(e) {
+            e.preventDefault();
+            console.log('🎯 Start button clicked');
+            document.querySelector('.hero').style.display = 'none';
+            elements.stepperContainer.classList.add('active');
+            loadCountries();
+            loadTopics();
+            loadCampaigns();
+        };
+    }
     
     // Navigation buttons
-    elements.prevBtn.addEventListener('click', () => goToStep(state.currentStep - 1));
-    elements.nextBtn.addEventListener('click', handleNextStep);
+    if (elements.prevBtn) {
+        elements.prevBtn.onclick = function(e) {
+            e.preventDefault();
+            goToStep(state.currentStep - 1);
+        };
+    }
+    
+    if (elements.nextBtn) {
+        elements.nextBtn.onclick = function(e) {
+            e.preventDefault();
+            handleNextStep();
+        };
+    }
     
     // Country select
-    elements.countrySelect.addEventListener('change', handleCountryChange);
+    if (elements.countrySelect) {
+        elements.countrySelect.onchange = handleCountryChange;
+    }
     
     // Residency radio buttons
-    document.querySelectorAll('input[name="resident"]').forEach(radio => {
-        radio.addEventListener('change', (e) => {
+    document.querySelectorAll('input[name=\"resident\"]').forEach(radio => {
+        radio.onclick = function(e) {
             state.isResident = e.target.value === 'yes';
-        });
+        };
     });
     
     // Send email button
-    elements.sendEmailBtn.addEventListener('click', sendEmail);
+    if (elements.sendEmailBtn) {
+        elements.sendEmailBtn.onclick = function(e) {
+            e.preventDefault();
+            sendEmail();
+        };
+    }
+    
+    console.log('✅ App initialized successfully');
 }
 
 function goToStep(step) {
@@ -179,7 +208,7 @@ async function loadCountries() {
         state.countries = data.countries || [];
         
         elements.countrySelect.innerHTML = '<option value="">یک کشور انتخاب کنید...</option>' +
-            state.countries.map(c => `<option value="${c.code}">${c.name}</option>`).join('');
+            state.countries.map(c => `<option value="${c.code}">${c.flag || ''} ${c.name}</option>`).join('');
         
     } catch (error) {
         console.error('Error loading countries:', error);
@@ -231,6 +260,70 @@ async function loadTopics() {
         showNotification('خطا در بارگذاری موضوعات', 'error');
         elements.topicsList.innerHTML = '<div class="loading">خطا در بارگذاری</div>';
     }
+}
+
+async function loadCampaigns() {
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/campaigns`);
+        if (!response.ok) throw new Error('Failed to load campaigns');
+        
+        const data = await response.json();
+        state.campaigns = data.campaigns || [];
+        
+        renderCampaigns();
+        
+    } catch (error) {
+        console.error('Error loading campaigns:', error);
+        // Silently fail for campaigns - it's optional
+    }
+}
+
+function renderCampaigns() {
+    const campaignsSection = document.getElementById('campaignsSection');
+    const campaignsList = document.getElementById('campaignsList');
+    
+    if (!state.campaigns || state.campaigns.length === 0) {
+        campaignsSection.style.display = 'none';
+        return;
+    }
+    
+    campaignsSection.style.display = 'block';
+    
+    campaignsList.innerHTML = state.campaigns.map(campaign => `
+        <div class=\"campaign-card\" onclick=\"selectCampaign(${campaign.id})\" data-campaign-id=\"${campaign.id}\">
+            <div class=\"campaign-icon\">${campaign.icon}</div>
+            <div class=\"campaign-title\">${campaign.title}</div>
+            <div class=\"campaign-desc\">${campaign.description || ''}</div>
+            <div class=\"campaign-country\">
+                <span>${campaign.country.flag}</span>
+                <span>${campaign.country.name}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function selectCampaign(campaignId) {
+    const campaign = state.campaigns.find(c => c.id === campaignId);
+    if (!campaign) return;
+    
+    // Pre-fill selections
+    state.selectedCountry = campaign.country.code;
+    state.selectedRecipients = new Set(campaign.recipient_ids);
+    state.selectedTopics = new Set(campaign.topic_ids);
+    state.selectedCampaign = campaignId;
+    
+    // Start the stepper with pre-filled data
+    document.querySelector('.hero').style.display = 'none';
+    elements.stepperContainer.classList.add('active');
+    
+    // Load data
+    loadCountries().then(() => {
+        elements.countrySelect.value = state.selectedCountry;
+        return handleCountryChange({ target: { value: state.selectedCountry } });
+    });
+    loadTopics();
+    
+    showNotification(`کمپین "${campaign.title}" انتخاب شد`, 'info');
 }
 
 async function generateEmail() {
@@ -414,6 +507,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('✅ All elements found');
     }
     
+    // Load campaigns on page load
+    loadCampaigns();
+    
     // Initialize stepper
     try {
         initStepper();
@@ -423,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification('خطا در راه‌اندازی', 'error');
     }
     
-    // Test button click manually
+    // Test button click manually (Safari compatibility fallback)
     if (elements.startBtn) {
         console.log('✅ Start button found, adding listener...');
         elements.startBtn.onclick = function() {

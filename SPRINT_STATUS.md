@@ -32,7 +32,59 @@
 
 ---
 
-## 🚀 Sprint 2: IN PROGRESS
+## ✅ Sprint 5: COMPLETED
+
+### What We Built
+1. **Safari Compatibility** 
+   - ✅ Fixed button clicks in Safari (onclick vs addEventListener)
+   - ✅ Added webkit prefixes for cross-browser support
+   - ✅ Added touch-action and tap-highlight fixes
+   - ✅ Works in Safari, Chrome, Firefox, Edge
+
+2. **Responsive Design**
+   - ✅ Mobile-first design with breakpoints (1024px, 768px, 480px)
+   - ✅ Horizontal scrolling hero steps on mobile
+   - ✅ Single-column layouts for small screens
+   - ✅ Optimized touch targets for mobile
+
+3. **Campaigns Feature (Hot Topics)**
+   - ✅ Backend Campaign model with predefined selections
+   - ✅ `/api/v1/campaigns` endpoint
+   - ✅ Frontend campaigns section on main page
+   - ✅ One-click campaign selection → pre-filled form
+   - ✅ Display order and hot campaign flags
+
+4. **Top 60 Countries with Flags**
+   - ✅ Curated list of most influential countries
+   - ✅ Country flag emojis in UI
+   - ✅ Includes G7, EU powers, Asian/BRICS nations
+   - ✅ Database seeded with only top 60
+
+5. **Form UX Improvements**
+   - ✅ Whole item cards clickable (not just checkbox)
+   - ✅ Visual feedback on hover and selection
+   - ✅ Safari-compatible click handlers
+
+6. **Hero Section Fix**
+   - ✅ Fixed step info overflow on mobile
+   - ✅ Horizontal scrolling on small screens
+   - ✅ Responsive sizing and spacing
+
+### Files Created
+- `/backend/data/top_countries.py` - Top 60 countries list with flags
+- `/SPRINT_5_SUMMARY.md` - Detailed Sprint 5 documentation
+
+### Files Modified
+- `/backend/models.py` - Campaign model
+- `/backend/routes/public.py` - Campaigns endpoint, country flags
+- `/backend/database.py` - Seed top 60 countries
+- `/frontend/index.html` - Campaigns section
+- `/frontend/css/style.css` - Responsive design, Safari fixes, campaign styles
+- `/frontend/js/app.js` - Safari compatibility, campaigns, flags
+
+---
+
+## 🚀 Sprint 2-4: Backlog
 
 ### Goals
 1. **Email Generation Enhancement**

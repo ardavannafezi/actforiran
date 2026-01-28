@@ -82,6 +82,34 @@ class AdvocacyTopic(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
+class Campaign(Base):
+    """Predefined campaigns (hot topics) set by admins"""
+    __tablename__ = "campaigns"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    slug = Column(String(100), unique=True, nullable=False, index=True)
+    icon = Column(String(10), nullable=True)  # Emoji icon
+    
+    # Predefined selections
+    country_code = Column(String(3), ForeignKey("countries.code"), nullable=False)
+    recipient_ids = Column(JSONB, nullable=False)  # Array of recipient IDs
+    topic_ids = Column(JSONB, nullable=False)  # Array of topic IDs
+    
+    # Settings
+    is_hot = Column(Boolean, default=False)  # Show on main page
+    is_active = Column(Boolean, default=True)
+    display_order = Column(Integer, default=0)
+    
+    # Metadata
+    created_by_admin_id = Column(Integer, ForeignKey("administrators.id"), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    country = relationship("Country")
+    created_by = relationship("Administrator")
 
 class EmailGenerationLog(Base):
     __tablename__ = "email_generation_logs"

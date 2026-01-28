@@ -256,6 +256,12 @@ async function testConnectivity() {
     updateSectionStatus('test', success ? 'success' : 'error');
 }
 
+async function testDatabase() {
+    updateSectionStatus('test', 'pending');
+    const success = await testEndpoint('database', '/api/test/database');
+    updateSectionStatus('test', success ? 'success' : 'error');
+}
+
 async function testSampleData() {
     updateSectionStatus('test', 'pending');
     const success = await testEndpoint('sample-data', '/api/test/sample-data');
@@ -265,6 +271,27 @@ async function testSampleData() {
 async function testAdminAuth() {
     updateSectionStatus('test', 'pending');
     const success = await testEndpoint('admin-auth', '/api/test/admin-auth');
+    updateSectionStatus('test', success ? 'success' : 'error');
+}
+
+async function testPublicEndpoints() {
+    updateSectionStatus('test', 'pending');
+    const success = await testEndpoint('public-endpoints', '/api/test/public-endpoints');
+    updateSectionStatus('test', success ? 'success' : 'error');
+}
+
+async function testEmailGeneration() {
+    updateSectionStatus('test', 'pending');
+    const success = await testEndpoint('email-generation', '/api/test/email-generation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    });
+    updateSectionStatus('test', success ? 'success' : 'error');
+}
+
+async function testAdminLoginTest() {
+    updateSectionStatus('test', 'pending');
+    const success = await testEndpoint('admin-login-test', '/api/test/admin-login-test');
     updateSectionStatus('test', success ? 'success' : 'error');
 }
 
@@ -292,9 +319,17 @@ async function runAllTests() {
     // Test API tests
     await testConnectivity();
     await sleep(500);
+    await testDatabase();
+    await sleep(500);
     await testSampleData();
     await sleep(500);
     await testAdminAuth();
+    await sleep(500);
+    await testPublicEndpoints();
+    await sleep(500);
+    await testEmailGeneration();
+    await sleep(500);
+    await testAdminLoginTest();
     await sleep(500);
     
     // Admin tests (require login first)

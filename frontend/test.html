@@ -379,6 +379,17 @@
                     <div class="endpoint-header">
                         <div>
                             <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/test/database</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testDatabase()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-database" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
                             <span class="endpoint-url">/api/test/sample-data</span>
                         </div>
                         <button class="btn btn-secondary btn-sm" onclick="testSampleData()">تست</button>
@@ -395,6 +406,39 @@
                         <button class="btn btn-secondary btn-sm" onclick="testAdminAuth()">تست</button>
                     </div>
                     <div class="test-result" id="result-admin-auth" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/test/public-endpoints</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testPublicEndpoints()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-public-endpoints" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-post">POST</span>
+                            <span class="endpoint-url">/api/test/email-generation</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testEmailGeneration()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-email-generation" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/test/admin-login-test</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testAdminLoginTest()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-admin-login-test" style="display:none;"></div>
                 </div>
             </div>
         </div>

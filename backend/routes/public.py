@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from limiter import limiter
-from models import AdvocacyTopic, Country, PoliticalRecipient, RecipientRole, EmailGenerationLog
+from models import AdvocacyTopic, Country, PoliticalRecipient, RecipientRole, EmailGenerationLog, Campaign
 from schemas import (
     CountriesResponse,
     GenerateEmailRequest,
@@ -16,14 +16,30 @@ from schemas import (
     TopicsResponse,
 )
 from services.ai_service import AIServiceError, generate_email
+from data.top_countries import get_country_flag, TOP_COUNTRIES
 
 router = APIRouter(prefix="/api/v1", tags=["public"])
 
 
 @router.get("/countries", response_model=CountriesResponse)
 async def list_countries(db: Session = Depends(get_db)):
-    countries = db.query(Country).filter(Country.is_active.is_(True)).order_by(Country.name).all()
-    return {"countries": [{"code": c.code, "name": c.name} for c in countries]}
+    \"\"\"Get list of top influential countries with flags\"\"\"
+    # Get only countries from TOP_COUNTRIES list
+    top_codes = [c["code"] for c in TOP_COUNTRIES]
+    countries = db.query(Country).filter(
+        Country.is_active.is_(True),
+        Country.code.in_(top_codes)
+    ).order_by(Country.name).all()
+    
+    return {
+        "countries": [
+            {
+                "code": c.code,
+                "name": c.name,
+                "flag": get_country_flag(c.code)
+            } for c in countries
+        ]
+    }
 
 
 @router.get("/recipients", response_model=RecipientsResponse)
@@ -85,6 +101,35 @@ async def list_topics(db: Session = Depends(get_db)):
             for t in topics
         ]
     }
+
+
+@router.get("/campaigns")
+async def list_campaigns(db: Session = Depends(get_db)):
+    \"\"\"Get list of hot campaigns (predefined by admins)\"\"\"
+    campaigns = db.query(Campaign).filter(
+        Campaign.is_active.is_(True),
+        Campaign.is_hot.is_(True)
+    ).order_by(Campaign.display_order, Campaign.created_at.desc()).all()
+    
+    result = []
+    for campaign in campaigns:
+        country = db.query(Country).filter(Country.code == campaign.country_code).first()
+        result.append({
+            "id": campaign.id,
+            "title": campaign.title,
+            "description": campaign.description,
+            "slug": campaign.slug,
+            "icon": campaign.icon or "🔥",
+            "country": {
+                "code": campaign.country_code,
+                "name": country.name if country else "",
+                "flag": get_country_flag(campaign.country_code)
+            },
+            "recipient_ids": campaign.recipient_ids,
+            "topic_ids": campaign.topic_ids
+        })
+    
+    return {"campaigns": result}
 
 
 @router.post("/generate-email", response_model=GenerateEmailResponse)

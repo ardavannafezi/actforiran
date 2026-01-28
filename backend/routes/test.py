@@ -148,3 +148,71 @@ async def test_admin_credentials():
             "note": "Use these credentials to test admin panel login"
         }
     }
+
+@router.get("/sample-data")
+async def test_sample_data(db: Session = Depends(get_db)):
+    """Get sample data for testing"""
+    try:
+        sample_country = db.query(Country).first()
+        sample_recipients = db.query(PoliticalRecipient).filter(
+            PoliticalRecipient.approval_status == "approved"
+        ).limit(3).all()
+        sample_topics = db.query(AdvocacyTopic).filter(
+            AdvocacyTopic.approval_status == "approved"
+        ).limit(3).all()
+        
+        return {
+            "status": "success",
+            "message": "Sample data retrieved",
+            "data": {
+                "country": {
+                    "code": sample_country.code if sample_country else None,
+                    "name": sample_country.name if sample_country else None
+                },
+                "recipients": [
+                    {
+                        "id": r.id,
+                        "name": r.full_name,
+                        "email": r.email_address,
+                        "country": r.country_code
+                    } for r in sample_recipients
+                ],
+                "topics": [
+                    {
+                        "id": t.id,
+                        "title": t.display_title,
+                        "slug": t.slug
+                    } for t in sample_topics
+                ]
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching sample data: {str(e)}")
+
+@router.get("/admin-auth")
+async def test_admin_auth(db: Session = Depends(get_db)):
+    """Test admin authentication setup"""
+    try:
+        admin = db.query(Administrator).filter(
+            Administrator.email == "admin@actforiran.org"
+        ).first()
+        
+        if not admin:
+            return {
+                "status": "error",
+                "message": "Admin user not found in database",
+                "note": "Run database seeding to create admin user"
+            }
+        
+        return {
+            "status": "success",
+            "message": "Admin user exists in database",
+            "admin": {
+                "email": admin.email,
+                "role": admin.role,
+                "is_active": admin.is_active,
+                "note": "Password: admin123 (bcrypt hashed in DB)"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error checking admin: {str(e)}")
