@@ -11,9 +11,11 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from dotenv import load_dotenv
 
-from database import init_db
+from database import init_db, SessionLocal
 from limiter import limiter
+from routes.admin import router as admin_router
 from routes.public import router as public_router
+from services.auth import create_initial_super_admin
 
 # Load environment variables
 load_dotenv()
@@ -44,6 +46,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Routes
 app.include_router(public_router)
+app.include_router(admin_router)
 
 
 @app.get("/")
@@ -93,6 +96,11 @@ async def startup_event():
     print(f"💾 Database: {'Configured' if os.getenv('DATABASE_URL') else 'Not configured'}")
     print(f"🤖 AI Service: {'Configured' if os.getenv('OPENAI_API_KEY') else 'Not configured'}")
     init_db()
+    db = SessionLocal()
+    try:
+        create_initial_super_admin(db)
+    finally:
+        db.close()
     print("✅ Application started successfully!")
 
 

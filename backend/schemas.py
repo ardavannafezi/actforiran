@@ -52,3 +52,20 @@ class GenerateEmailResponse(BaseModel):
     body: str
     recipients: List[RecipientEmailOut]
     mailto_link: str
+
+
+class AdminLoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+
+
+class AdminTokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    role: str
+
+
+class AdminMeResponse(BaseModel):
+    id: int
+    email: EmailStr
+    role: str
