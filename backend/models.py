@@ -115,7 +115,8 @@ class Campaign(Base):
     
     # Relationships
     country = relationship("Country")
-    created_by = relationship("Administrator")
+    created_by = relationship("Administrator", foreign_keys=[created_by_admin_id])
+    approved_by = relationship("Administrator", foreign_keys=[approved_by_admin_id])
 
 class EmailGenerationLog(Base):
     __tablename__ = "email_generation_logs"

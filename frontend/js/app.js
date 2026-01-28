@@ -77,37 +77,28 @@ function initStepper() {
     const campaignsSection = document.getElementById('campaignsSection');
     const stepsPreview = document.getElementById('stepsPreview');
     const choiceSection = document.getElementById('choiceSection');
-    const backToChoice = document.getElementById('backToChoice');
     const backToChoiceCustom = document.getElementById('backToChoiceCustom');
     
     if (campaignChoice) {
         campaignChoice.onclick = function() {
-            choiceSection.style.display = 'none';
-            campaignsSection.style.display = 'block';
-            stepsPreview.style.display = 'none';
+            // Campaigns are always visible, just scroll to them
+            document.getElementById('campaignsSection').scrollIntoView({ behavior: 'smooth' });
         };
     }
     
     if (customChoice) {
         customChoice.onclick = function() {
             choiceSection.style.display = 'none';
-            campaignsSection.style.display = 'none';
             stepsPreview.style.display = 'block';
-        };
-    }
-    
-    if (backToChoice) {
-        backToChoice.onclick = function() {
-            choiceSection.style.display = 'block';
-            campaignsSection.style.display = 'none';
-            stepsPreview.style.display = 'none';
+            // Scroll to form
+            document.getElementById('step1').scrollIntoView({ behavior: 'smooth' });
         };
     }
     
     if (backToChoiceCustom) {
         backToChoiceCustom.onclick = function() {
             choiceSection.style.display = 'block';
-            campaignsSection.style.display = 'none';
+            stepsPreview.style.display = 'none';
             stepsPreview.style.display = 'none';
         };
     }
@@ -330,7 +321,6 @@ function renderCampaigns() {
     const campaignsList = document.getElementById('campaignsList');
     
     if (!state.campaigns || state.campaigns.length === 0) {
-        campaignsSection.style.display = 'none';
         return;
     }
     
@@ -341,9 +331,11 @@ function renderCampaigns() {
         .slice(0, 5);
     
     if (hotCampaigns.length === 0) {
-        campaignsSection.style.display = 'none';
         return;
     }
+    
+    // Always show campaigns section
+    campaignsSection.style.display = 'block';
     
     campaignsList.innerHTML = hotCampaigns.map(campaign => `
         <div class="campaign-card" onclick="selectCampaign(${campaign.id})" data-campaign-id="${campaign.id}">

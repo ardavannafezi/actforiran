@@ -48,16 +48,34 @@ def seed_defaults(db):
 
     print("🌱 Seeding initial data...")
 
+    # Get admin credentials from environment or use defaults
+    super_admin_email = os.getenv("SUPER_ADMIN_EMAIL", "admin@actforiran.org")
+    super_admin_password = os.getenv("SUPER_ADMIN_PASSWORD", "admin123")
+    admin_email = os.getenv("ADMIN_EMAIL", "moderator@actforiran.org")
+    admin_password = os.getenv("ADMIN_PASSWORD", "moderator123")
+
     # Create super admin
     super_admin = Administrator(
-        email="admin@actforiran.org",
-        password_hash=get_password_hash("admin123"),
+        email=super_admin_email,
+        password_hash=get_password_hash(super_admin_password),
         role="super_admin",
         is_active=True
     )
     db.add(super_admin)
     db.commit()
     db.refresh(super_admin)
+    
+    # Create normal admin
+    normal_admin = Administrator(
+        email=admin_email,
+        password_hash=get_password_hash(admin_password),
+        role="admin",
+        is_active=True,
+        created_by_admin_id=super_admin.id
+    )
+    db.add(normal_admin)
+    db.commit()
+    db.refresh(normal_admin)
 
     # Seed countries (with Persian names and flags)
     if db.query(Country).count() == 0:
@@ -284,7 +302,8 @@ def seed_defaults(db):
         print(f"   Campaigns: {len(campaigns_data)} created")
     
     print("✅ Database seeded successfully!")
-    print(f"   Super Admin: admin@actforiran.org / admin123")
+    print(f"   Super Admin: {super_admin_email} / {super_admin_password}")
+    print(f"   Normal Admin: {admin_email} / {admin_password}")
     print(f"   Countries: {len(TOP_COUNTRIES)} created")
     print(f"   Recipients: {len(recipients_data)} created") 
     print(f"   Topics: {len(topics_data)} created")
