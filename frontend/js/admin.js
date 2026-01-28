@@ -461,29 +461,46 @@ function toPersian(num) {
 }
 
 // ============================================
-// EVENT LISTENERS
-// ============================================
-loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    login(email, password);
-});
-
-logoutBtn.addEventListener('click', logout);
-
-// Close modals on outside click
-document.querySelectorAll('.modal').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('active');
-        }
-    });
-});
-
-// ============================================
 // INITIALIZATION
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔐 Admin Panel Loaded');
+    console.log('📡 API Base:', API_BASE);
+    
+    // Setup event listeners
+    const loginFormElement = document.getElementById('loginForm');
+    const logoutBtnElement = document.getElementById('logoutBtn');
+    
+    if (loginFormElement) {
+        console.log('✅ Login form found');
+        loginFormElement.addEventListener('submit', (e) => {
+            e.preventDefault();
+            console.log('📝 Login form submitted');
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            login(email, password);
+        });
+    } else {
+        console.error('❌ Login form not found');
+    }
+    
+    if (logoutBtnElement) {
+        console.log('✅ Logout button found');
+        logoutBtnElement.addEventListener('click', () => {
+            console.log('🚪 Logout clicked');
+            logout();
+        });
+    }
+    
+    // Close modals on outside click
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    });
+    
+    // Check auth
     checkAuth();
 });

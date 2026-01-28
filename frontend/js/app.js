@@ -395,6 +395,52 @@ function renderTopics() {
 // INITIALIZATION
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
-    initStepper();
+    console.log('🚀 ActForIran App Loaded');
+    console.log('📡 API Base:', API_BASE);
+    
+    // Check if all elements exist
+    const missingElements = [];
+    for (const [key, element] of Object.entries(elements)) {
+        if (!element) {
+            missingElements.push(key);
+            console.error(`❌ Missing element: ${key}`);
+        }
+    }
+    
+    if (missingElements.length > 0) {
+        console.error('⚠️ Some elements are missing:', missingElements);
+        showNotification('خطا در بارگذاری صفحه', 'error');
+    } else {
+        console.log('✅ All elements found');
+    }
+    
+    // Initialize stepper
+    try {
+        initStepper();
+        console.log('✅ Stepper initialized');
+    } catch (error) {
+        console.error('❌ Error initializing stepper:', error);
+        showNotification('خطا در راه‌اندازی', 'error');
+    }
+    
+    // Test button click manually
+    if (elements.startBtn) {
+        console.log('✅ Start button found, adding listener...');
+        elements.startBtn.onclick = function() {
+            console.log('🎯 Start button clicked!');
+            try {
+                document.querySelector('.hero').style.display = 'none';
+                elements.stepperContainer.classList.add('active');
+                loadCountries();
+                loadTopics();
+                showNotification('خوش آمدید! لطفاً کشور را انتخاب کنید', 'success');
+            } catch (error) {
+                console.error('❌ Error in start button handler:', error);
+                showNotification('خطا در شروع کمپین', 'error');
+            }
+        };
+    } else {
+        console.error('❌ Start button not found!');
+    }
 });
 

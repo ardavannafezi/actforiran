@@ -180,6 +180,64 @@ body {
     margin-bottom: 32px;
 }
 
+/* Hero Steps Preview */
+.hero-steps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin: 40px 0;
+    flex-wrap: wrap;
+}
+
+.hero-step {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    min-width: 150px;
+    transition: all 0.3s ease;
+}
+
+.hero-step:hover {
+    border-color: var(--accent-red);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(220, 38, 38, 0.2);
+}
+
+.hero-step-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+}
+
+.hero-step-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.hero-step-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.hero-step-arrow {
+    font-size: 24px;
+    color: var(--accent-red);
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .hero-step-arrow {
+        display: none;
+    }
+    
+    .hero-steps {
+        flex-direction: column;
+        gap: 12px;
+    }
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;
