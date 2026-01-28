@@ -557,3 +557,133 @@ async def reject_topic(
     )
     db.commit()
     return {"status": "rejected"}
+
+
+# ============================================
+# ANALYTICS ENDPOINTS
+# ============================================
+
+@router.get("/analytics/overview")
+async def get_analytics_overview(
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Get overall platform analytics"""
+    from models import EmailGenerationLog
+    from sqlalchemy import func
+    
+    total_emails = db.query(func.count(EmailGenerationLog.id)).scalar() or 0
+    successful_emails = db.query(func.count(EmailGenerationLog.id)).filter(
+        EmailGenerationLog.generation_successful == True
+    ).scalar() or 0
+    
+    total_recipients = db.query(func.count(PoliticalRecipient.id)).filter(
+        PoliticalRecipient.approval_status == "approved"
+    ).scalar() or 0
+    
+    total_topics = db.query(func.count(AdvocacyTopic.id)).filter(
+        AdvocacyTopic.approval_status == "approved"
+    ).scalar() or 0
+    
+    total_countries = db.query(func.count(Country.code)).filter(
+        Country.is_active == True
+    ).scalar() or 0
+    
+    return {
+        "total_emails_generated": total_emails,
+        "successful_emails": successful_emails,
+        "failed_emails": total_emails - successful_emails,
+        "total_recipients": total_recipients,
+        "total_topics": total_topics,
+        "total_countries": total_countries,
+        "success_rate": round((successful_emails / total_emails * 100) if total_emails > 0 else 0, 2)
+    }
+
+
+@router.get("/analytics/top-countries")
+async def get_top_countries(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Get most popular countries by email generation"""
+    from models import EmailGenerationLog
+    from sqlalchemy import func, desc
+    
+    results = db.query(
+        EmailGenerationLog.selected_recipient_country,
+        func.count(EmailGenerationLog.id).label('count')
+    ).group_by(
+        EmailGenerationLog.selected_recipient_country
+    ).order_by(desc('count')).limit(limit).all()
+    
+    return {
+        "top_countries": [
+            {"country": r[0], "email_count": r[1]}
+            for r in results
+        ]
+    }
+
+
+@router.get("/analytics/top-topics")
+async def get_top_topics(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Get most used topics"""
+    from models import EmailGenerationLog
+    from sqlalchemy import func, desc
+    
+    # Get all topic IDs from logs
+    logs = db.query(EmailGenerationLog.topic_ids).filter(
+        EmailGenerationLog.topic_ids.isnot(None)
+    ).all()
+    
+    topic_counts = {}
+    for log in logs:
+        if log.topic_ids:
+            for topic_id in log.topic_ids:
+                topic_counts[topic_id] = topic_counts.get(topic_id, 0) + 1
+    
+    sorted_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
+    
+    results = []
+    for topic_id, count in sorted_topics:
+        topic = db.query(AdvocacyTopic).filter(AdvocacyTopic.id == topic_id).first()
+        if topic:
+            results.append({
+                "topic_id": topic_id,
+                "topic_title": topic.display_title,
+                "usage_count": count
+            })
+    
+    return {"top_topics": results}
+
+
+@router.get("/analytics/recent-activity")
+async def get_recent_activity(
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Get recent email generation activity"""
+    from models import EmailGenerationLog
+    
+    logs = db.query(EmailGenerationLog).order_by(
+        EmailGenerationLog.created_at.desc()
+    ).limit(limit).all()
+    
+    return {
+        "recent_activity": [
+            {
+                "id": log.id,
+                "country": log.selected_recipient_country,
+                "is_resident": log.is_country_resident,
+                "success": log.generation_successful,
+                "created_at": log.created_at.isoformat() if log.created_at else None,
+                "error": log.error_message
+            }
+            for log in logs
+        ]
+    }

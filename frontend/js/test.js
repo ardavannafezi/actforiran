@@ -125,6 +125,12 @@ async function testTopics() {
     updateSectionStatus('public', success ? 'success' : 'error');
 }
 
+async function testCampaigns() {
+    updateSectionStatus('public', 'pending');
+    const success = await testEndpoint('campaigns', '/api/v1/campaigns');
+    updateSectionStatus('public', success ? 'success' : 'error');
+}
+
 async function testGenerateEmail() {
     updateSectionStatus('public', 'pending');
     
@@ -241,6 +247,66 @@ async function testAdminRoles() {
     }
     
     const success = await testEndpoint('admin-roles', '/api/v1/admin/roles', {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    
+    updateSectionStatus('admin', success ? 'success' : 'error');
+}
+
+async function testAnalyticsOverview() {
+    updateSectionStatus('admin', 'pending');
+    
+    if (!adminToken) {
+        adminToken = localStorage.getItem('testAdminToken');
+    }
+    
+    if (!adminToken) {
+        showResult('analytics-overview', false, 'لطفاً ابتدا لاگین کنید');
+        updateSectionStatus('admin', 'error');
+        return;
+    }
+    
+    const success = await testEndpoint('analytics-overview', '/api/v1/admin/analytics/overview', {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    
+    updateSectionStatus('admin', success ? 'success' : 'error');
+}
+
+async function testTopCountries() {
+    updateSectionStatus('admin', 'pending');
+    
+    if (!adminToken) {
+        adminToken = localStorage.getItem('testAdminToken');
+    }
+    
+    if (!adminToken) {
+        showResult('top-countries', false, 'لطفاً ابتدا لاگین کنید');
+        updateSectionStatus('admin', 'error');
+        return;
+    }
+    
+    const success = await testEndpoint('top-countries', '/api/v1/admin/analytics/top-countries', {
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    
+    updateSectionStatus('admin', success ? 'success' : 'error');
+}
+
+async function testTopTopics() {
+    updateSectionStatus('admin', 'pending');
+    
+    if (!adminToken) {
+        adminToken = localStorage.getItem('testAdminToken');
+    }
+    
+    if (!adminToken) {
+        showResult('top-topics', false, 'لطفاً ابتدا لاگین کنید');
+        updateSectionStatus('admin', 'error');
+        return;
+    }
+    
+    const success = await testEndpoint('top-topics', '/api/v1/admin/analytics/top-topics', {
         headers: { 'Authorization': `Bearer ${adminToken}` }
     });
     

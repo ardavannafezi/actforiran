@@ -18,37 +18,48 @@ def _build_prompt(
     residency_status: str,
     topic_lines: List[str],
     recipient_lines: List[str],
+    user_name: str = None,
 ) -> Tuple[str, str]:
+    
+    sender_intro = f"from {user_name}" if user_name else "from a concerned individual"
+    
     system_prompt = (
-        "You are writing a personal advocacy email to senior officials in "
-        f"{country_name} regarding human rights violations in Iran.\n\n"
-        "Tone: Urgent but respectful, personal but informed\n"
-        "Length: 200-300 words\n"
-        "Format: Professional email\n\n"
-        "Avoid:\n"
-        "- Generic template language\n"
-        "- Overly formal bureaucratic language\n"
-        "- Repetitive phrases\n\n"
-        "Include:\n"
-        "- Specific call to action appropriate for these officials\n"
-        "- Reference to current events\n"
-        "- Personal touch based on sender's residency status"
+        "You are an expert at writing compelling, authentic advocacy emails in English. "
+        "Your emails sound genuinely human — passionate but professional, urgent but respectful.\n\n"
+        "CRITICAL REQUIREMENTS:\n"
+        "- Write ONLY in English (never Farsi/Persian)\n"
+        "- Make it sound authentic and personal, not template-like\n"
+        "- Vary sentence structure and word choice\n"
+        "- Use emotional appeal while maintaining credibility\n"
+        "- Include specific details about Iran's human rights crisis\n"
+        "- Reference current events (2026 protests, Woman Life Freedom movement)\n\n"
+        "TONE: Urgent, compassionate, informed citizen\n"
+        "LENGTH: 250-350 words\n"
+        "STYLE: Personal letter to official (not a formal petition)"
     )
 
+    citizenship_context = "I am a resident and voter in your country" if residency_status == "Resident" else "I am an international observer deeply concerned about this issue"
+    
     user_prompt = (
-        "Writer profile:\n"
-        f"- {residency_status}\n\n"
-        "Topics to address:\n"
+        f"Write a personal advocacy email {sender_intro} to officials in {country_name} "
+        "about Iran's human rights crisis.\n\n"
+        f"Sender context: {citizenship_context}\n\n"
+        "Key topics to address:\n"
         f"{chr(10).join(topic_lines)}\n\n"
         "Recipients:\n"
         f"{chr(10).join(recipient_lines)}\n\n"
-        "Generate:\n"
-        "1. A compelling, personalized email body (200-300 words)\n"
-        "2. An email subject line (max 60 characters)\n\n"
+        "REQUIREMENTS:\n"
+        "1. Start with a personal greeting\n"
+        "2. Explain why you're writing (personal connection to issue)\n"
+        "3. Present 2-3 specific human rights violations from the topics\n"
+        "4. Include emotional but factual appeals\n"
+        "5. Make 2-3 concrete action requests\n"
+        "6. Close with urgency but respect\n"
+        f"7. Sign as '{user_name if user_name else 'A Concerned Citizen'}'\n\n"
         "Output format:\n"
-        "SUBJECT: [subject line]\n\n"
+        "SUBJECT: [compelling subject under 60 chars]\n\n"
         "BODY:\n"
-        "[email body]"
+        "[email body in English — sound human, vary language, be specific]"
     )
 
     return system_prompt, user_prompt
@@ -75,13 +86,14 @@ async def generate_email(
     recipients: List[dict],
     topics: List[dict],
     is_resident: bool,
+    user_name: str = None,
 ) -> Tuple[str, str, int]:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise AIServiceError("OPENAI_API_KEY is not configured")
 
-    residency_status = f"a resident of {country_name}" if is_resident else "an international supporter"
-    topic_lines = [f"- {t['display_title']}: {t.get('description') or 'No description'}" for t in topics]
+    residency_status = "Resident" if is_resident else "International Supporter"
+    topic_lines = [f"- {t['display_title']}: {t.get('description') or 'Critical human rights concern'}" for t in topics]
     recipient_lines = [f"- {r['full_name']} ({r['display_title']})" for r in recipients]
 
     system_prompt, user_prompt = _build_prompt(
@@ -89,6 +101,7 @@ async def generate_email(
         residency_status=residency_status,
         topic_lines=topic_lines,
         recipient_lines=recipient_lines,
+        user_name=user_name,
     )
 
     payload = {
@@ -97,8 +110,8 @@ async def generate_email(
             {"role": "developer", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "temperature": 0.7,
-        "max_completion_tokens": 700,
+        "temperature": 0.9,  # Higher for more variation
+        "max_completion_tokens": 800,
     }
 
     headers = {

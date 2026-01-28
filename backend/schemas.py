@@ -40,6 +40,9 @@ class GenerateEmailRequest(BaseModel):
     recipient_ids: List[int] = Field(..., min_length=1)
     topic_ids: List[int] = Field(..., min_length=1)
     is_resident: bool
+    user_name: Optional[str] = None
+    topic_ids: List[int] = Field(..., min_length=1)
+    is_resident: bool
 
 
 class RecipientEmailOut(BaseModel):

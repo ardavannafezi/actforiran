@@ -297,6 +297,17 @@
                 <div class="endpoint-test">
                     <div class="endpoint-header">
                         <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/v1/campaigns</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testCampaigns()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-campaigns" style="display:none;"></div>
+                </div>
+
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
                             <span class="endpoint-method method-post">POST</span>
                             <span class="endpoint-url">/api/v1/generate-email</span>
                         </div>
@@ -354,6 +365,39 @@
                         <button class="btn btn-secondary btn-sm" onclick="testAdminRoles()">تست</button>
                     </div>
                     <div class="test-result" id="result-admin-roles" style="display:none;"></div>
+                </div>
+                
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/v1/admin/analytics/overview</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testAnalyticsOverview()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-analytics-overview" style="display:none;"></div>
+                </div>
+                
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/v1/admin/analytics/top-countries</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testTopCountries()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-top-countries" style="display:none;"></div>
+                </div>
+                
+                <div class="endpoint-test">
+                    <div class="endpoint-header">
+                        <div>
+                            <span class="endpoint-method method-get">GET</span>
+                            <span class="endpoint-url">/api/v1/admin/analytics/top-topics</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="testTopTopics()">تست</button>
+                    </div>
+                    <div class="test-result" id="result-top-topics" style="display:none;"></div>
                 </div>
             </div>
 

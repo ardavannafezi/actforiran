@@ -191,6 +191,7 @@ async def generate_email_endpoint(
             recipients=recipients_payload,
             topics=topics_payload,
             is_resident=payload.is_resident,
+            user_name=payload.user_name,
         )
     except AIServiceError as exc:
         success = False

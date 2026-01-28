@@ -37,6 +37,7 @@ const elements = {
     countrySelect: document.getElementById('countrySelect'),
     recipientsList: document.getElementById('recipientsList'),
     topicsList: document.getElementById('topicsList'),
+    userName: document.getElementById('userName'),
     emailSubject: document.getElementById('emailSubject'),
     emailBody: document.getElementById('emailBody'),
     sendEmailBtn: document.getElementById('sendEmailBtn')
@@ -327,11 +328,14 @@ function selectCampaign(campaignId) {
 }
 
 async function generateEmail() {
+    const userName = elements.userName ? elements.userName.value.trim() : '';
+    
     const payload = {
         country_code: state.selectedCountry,
         recipient_ids: Array.from(state.selectedRecipients),
         topic_ids: Array.from(state.selectedTopics),
-        is_resident: state.isResident
+        is_resident: state.isResident,
+        user_name: userName || null
     };
     
     try {
