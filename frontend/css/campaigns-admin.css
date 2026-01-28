@@ -1,0 +1,84 @@
+/* Admin Campaigns Grid */
+.campaigns-admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.campaign-admin-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    position: relative;
+}
+
+.campaign-admin-card.is-hot {
+    border-color: var(--accent-red);
+}
+
+.campaign-admin-card.is-hot::before {
+    content: '🔥';
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    font-size: 20px;
+}
+
+.campaign-admin-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.campaign-admin-icon {
+    font-size: 32px;
+}
+
+.campaign-admin-info {
+    flex: 1;
+}
+
+.campaign-admin-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.campaign-admin-country {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+}
+
+.campaign-admin-description {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.campaign-admin-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.campaign-admin-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.campaign-admin-actions .btn {
+    flex: 1;
+    font-size: 13px;
+    padding: 8px 12px;
+}

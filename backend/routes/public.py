@@ -1,6 +1,7 @@
 import os
 from typing import Optional
 from urllib.parse import quote
+import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -19,6 +20,40 @@ from services.ai_service import AIServiceError, generate_email
 from data.top_countries import get_country_flag, TOP_COUNTRIES
 
 router = APIRouter(prefix="/api/v1", tags=["public"])
+
+
+@router.get("/suggest-country")
+async def suggest_country(request: Request):
+    """Get suggested country based on user's IP address"""
+    client_ip = request.client.host if request.client else None
+    
+    if not client_ip or client_ip in ["127.0.0.1", "localhost"]:
+        return {"suggested_country": None, "message": "Local IP detected"}
+    
+    try:
+        # Use ipapi.co free service for IP geolocation
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"https://ipapi.co/{client_ip}/json/")
+            data = response.json()
+            
+            if "country_code" in data and data["country_code"]:
+                country_code = data["country_code"]
+                # Check if this country is in our list
+                matching_country = next((c for c in TOP_COUNTRIES if c["code"] == country_code), None)
+                
+                if matching_country:
+                    return {
+                        "suggested_country": {
+                            "code": matching_country["code"],
+                            "name": matching_country["name"],
+                            "flag": matching_country["flag"]
+                        }
+                    }
+    except Exception as e:
+        # Silent fail - just return no suggestion
+        pass
+    
+    return {"suggested_country": None, "message": "Could not determine location"}
 
 
 @router.get("/countries", response_model=CountriesResponse)
@@ -199,9 +234,11 @@ async def generate_email_endpoint(
         raise HTTPException(status_code=502, detail="AI service failed to generate email") from exc
     finally:
         log_entry = EmailGenerationLog(
+            campaign_id=payload.campaign_id,
             sender_ip_address=request.client.host if request.client else None,
             sender_country_code=None,
             sender_country_name=None,
+            sender_user_name=payload.user_name,
             is_country_resident=payload.is_resident,
             selected_recipient_country=country.name,
             recipient_ids=payload.recipient_ids,

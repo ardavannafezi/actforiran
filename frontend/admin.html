@@ -6,6 +6,7 @@
     <title>پنل مدیریت | ActForIran</title>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/campaigns-admin.css">
 </head>
 <body>
     <div class="admin-app">
@@ -76,13 +77,24 @@
 
                 <!-- Tabs -->
                 <div class="admin-tabs">
-                    <button class="admin-tab active" data-tab="recipients">گیرندگان</button>
+                    <button class="admin-tab active" data-tab="campaigns">کمپین‌ها</button>
+                    <button class="admin-tab" data-tab="recipients">گیرندگان</button>
                     <button class="admin-tab" data-tab="topics">موضوعات</button>
                     <button class="admin-tab" data-tab="countries">کشورها</button>
+                    <button class="admin-tab" data-tab="analytics">آمار</button>
+                </div>
+
+                <!-- Campaigns Tab -->
+                <div class="tab-content active" id="campaignsTab">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h2>مدیریت کمپین‌ها</h2>
+                        <button class="btn btn-primary" id="addCampaignBtn">+ افزودن کمپین</button>
+                    </div>
+                    <div class="campaigns-admin-grid" id="campaignsAdminList"></div>
                 </div>
 
                 <!-- Recipients Tab -->
-                <div class="tab-content active" id="recipientsTab">
+                <div class="tab-content" id="recipientsTab">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                         <h2>مدیریت گیرندگان</h2>
                         <button class="btn btn-primary" id="addRecipientBtn">+ افزودن گیرنده</button>
@@ -208,8 +220,94 @@
                 </form>
             </div>
         </div>
-    </div>
 
-    <script src="js/admin.js"></script>
-</body>
+        <!-- Add/Edit Campaign Modal -->
+        <div class="modal" id="campaignModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="campaignModalTitle">افزودن کمپین</h2>
+                    <button class="modal-close" onclick="closeModal('campaignModal')">×</button>
+                </div>
+                <form id="campaignForm">
+                    <input type="hidden" id="campaignId">
+                    <div class="form-group">
+                        <label>عنوان کمپین</label>
+                        <input type="text" id="campaignTitle" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>شناسه (slug)</label>
+                        <input type="text" id="campaignSlug" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>توضیحات</label>
+                        <textarea id="campaignDescription" class="form-textarea" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>آیکون (emoji)</label>
+                        <input type="text" id="campaignIcon" class="form-input" placeholder="🔥">
+                    </div>
+                    <div class="form-group">
+                        <label>کشور</label>
+                        <select id="campaignCountry" class="form-input" required>
+                            <option value="">انتخاب کشور...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>گیرندگان (چند انتخابی)</label>
+                        <select id="campaignRecipients" class="form-input" multiple size="6">
+                        </select>
+                        <small style="color: var(--text-secondary);">با Ctrl/Cmd کلیک چند گزینه انتخاب کنید</small>
+                    </div>
+                    <div class="form-group">
+                        <label>موضوعات (چند انتخابی)</label>
+                        <select id="campaignTopics" class="form-input" multiple size="6">
+                        </select>
+                        <small style="color: var(--text-secondary);">با Ctrl/Cmd کلیک چند گزینه انتخاب کنید</small>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="campaignIsHot"> 
+                            کمپین داغ (نمایش در صفحه اصلی)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>ترتیب نمایش</label>
+                        <input type="number" id="campaignDisplayOrder" class="form-input" value="0">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">ذخیره</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Analytics Tab Content (add before closing main) -->
+        <div class="tab-content" id="analyticsTab" style="display: none;">
+            <h2>آمار و تحلیل</h2>
+            
+            <div class="stats-grid" style="margin-top: 24px;">
+                <div class="stat-card">
+                    <div class="stat-value" id="analyticsTotal">-</div>
+                    <div class="stat-label">کل ایمیل‌ها</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="analyticsSuccess">-</div>
+                    <div class="stat-label">نرخ موفقیت</div>
+                </div>
+            </div>
+            
+            <h3 style="margin: 32px 0 16px;">محبوب‌ترین کمپین‌ها</h3>
+            <div id="campaignAnalyticsList"></div>
+            
+            <h3 style="margin: 32px 0 16px;">کشورهای برتر</h3>
+            <div class="data-table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>کشور</th>
+                            <th>تعداد ایمیل</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topCountriesList"></tbody>
+                </table>
+            </div>
+        </div>
 </html>

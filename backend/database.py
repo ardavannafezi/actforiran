@@ -177,11 +177,163 @@ def seed_defaults(db):
 
     db.commit()
     
+    # Seed hot campaigns (only if none exist)
+    from models import Campaign
+    if db.query(Campaign).count() == 0:
+        print("📢 Creating hot campaigns...")
+        
+        # Get some topic IDs for campaigns
+        mahsa_topic = db.query(AdvocacyTopic).filter(AdvocacyTopic.slug == "mahsa-amini").first()
+        womens_rights_topic = db.query(AdvocacyTopic).filter(AdvocacyTopic.slug == "womens-rights").first()
+        executions_topic = db.query(AdvocacyTopic).filter(AdvocacyTopic.slug == "death-penalty").first()
+        sanctions_topic = db.query(AdvocacyTopic).filter(AdvocacyTopic.slug == "international-sanctions").first()
+        protesters_topic = db.query(AdvocacyTopic).filter(AdvocacyTopic.slug == "political-prisoners").first()
+        
+        # Get some recipient IDs by country
+        us_recipients = db.query(PoliticalRecipient).filter(
+            PoliticalRecipient.country_code == "USA"
+        ).limit(5).all()
+        uk_recipients = db.query(PoliticalRecipient).filter(
+            PoliticalRecipient.country_code == "GBR"
+        ).limit(5).all()
+        germany_recipients = db.query(PoliticalRecipient).filter(
+            PoliticalRecipient.country_code == "DEU"
+        ).limit(5).all()
+        france_recipients = db.query(PoliticalRecipient).filter(
+            PoliticalRecipient.country_code == "FRA"
+        ).limit(5).all()
+        canada_recipients = db.query(PoliticalRecipient).filter(
+            PoliticalRecipient.country_code == "CAN"
+        ).limit(5).all()
+        
+        campaigns_data = [
+            {
+                "title": "Stop Executions of Iranian Protesters",
+                "description": "Urgent action needed: Iran is executing peaceful protesters. Contact your representatives to demand international intervention.",
+                "slug": "stop-executions",
+                "icon": "⚖️",
+                "country_code": "USA",
+                "recipient_ids": [r.id for r in us_recipients],
+                "topic_ids": [executions_topic.id, protesters_topic.id, sanctions_topic.id] if executions_topic and protesters_topic and sanctions_topic else [],
+                "is_hot": True,
+                "is_active": True,
+                "display_order": 1
+            },
+            {
+                "title": "Support Iranian Women's Rights Movement",
+                "description": "Join the global movement supporting Iranian women fighting for freedom. Urge UK officials to take action.",
+                "slug": "womens-rights-uk",
+                "icon": "✊",
+                "country_code": "GBR",
+                "recipient_ids": [r.id for r in uk_recipients],
+                "topic_ids": [womens_rights_topic.id, mahsa_topic.id] if womens_rights_topic and mahsa_topic else [],
+                "is_hot": True,
+                "is_active": True,
+                "display_order": 2
+            },
+            {
+                "title": "Sanction Iranian Regime Officials",
+                "description": "Call on German government to impose stronger sanctions on Iranian officials responsible for human rights violations.",
+                "slug": "sanctions-germany",
+                "icon": "🚫",
+                "country_code": "DEU",
+                "recipient_ids": [r.id for r in germany_recipients],
+                "topic_ids": [sanctions_topic.id, executions_topic.id] if sanctions_topic and executions_topic else [],
+                "is_hot": True,
+                "is_active": True,
+                "display_order": 3
+            },
+            {
+                "title": "Free Political Prisoners in Iran",
+                "description": "Thousands of peaceful protesters are imprisoned in Iran. Contact French officials to demand their release.",
+                "slug": "free-prisoners-france",
+                "icon": "🔓",
+                "country_code": "FRA",
+                "recipient_ids": [r.id for r in france_recipients],
+                "topic_ids": [protesters_topic.id, sanctions_topic.id] if protesters_topic and sanctions_topic else [],
+                "is_hot": True,
+                "is_active": True,
+                "display_order": 4
+            },
+            {
+                "title": "Support Woman Life Freedom Movement",
+                "description": "Stand with the Woman Life Freedom movement. Urge Canadian officials to support Iranian people's fight for democracy.",
+                "slug": "woman-life-freedom-canada",
+                "icon": "💜",
+                "country_code": "CAN",
+                "recipient_ids": [r.id for r in canada_recipients],
+                "topic_ids": [womens_rights_topic.id, mahsa_topic.id, sanctions_topic.id] if womens_rights_topic and mahsa_topic and sanctions_topic else [],
+                "is_hot": True,
+                "is_active": True,
+                "display_order": 5
+            }
+        ]
+        
+        for campaign_data in campaigns_data:
+            if campaign_data["recipient_ids"] and campaign_data["topic_ids"]:  # Only create if we have valid data
+                campaign = Campaign(
+                    **campaign_data,
+                    created_by_admin_id=super_admin.id
+                )
+                db.add(campaign)
+        
+        db.commit()
+        print(f"   Campaigns: {len(campaigns_data)} created")
+    
     print("✅ Database seeded successfully!")
     print(f"   Super Admin: admin@actforiran.org / admin123")
     print(f"   Countries: {len(TOP_COUNTRIES)} created")
     print(f"   Recipients: {len(recipients_data)} created") 
     print(f"   Topics: {len(topics_data)} created")
+
+def run_migrations(db: Session):
+    """Run database migrations to add new columns if they don't exist"""
+    from sqlalchemy import text
+    
+    print("🔄 Checking for database migrations...")
+    
+    migrations = []
+    
+    # Check if campaign_id column exists in email_generation_logs
+    try:
+        result = db.execute(text("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='email_generation_logs' AND column_name='campaign_id'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE email_generation_logs ADD COLUMN campaign_id INTEGER REFERENCES campaigns(id)")
+            print("   ➕ Need to add campaign_id column")
+    except Exception as e:
+        print(f"   ⚠️  Could not check campaign_id: {e}")
+    
+    # Check if sender_user_name column exists in email_generation_logs
+    try:
+        result = db.execute(text("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='email_generation_logs' AND column_name='sender_user_name'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE email_generation_logs ADD COLUMN sender_user_name VARCHAR(255)")
+            print("   ➕ Need to add sender_user_name column")
+    except Exception as e:
+        print(f"   ⚠️  Could not check sender_user_name: {e}")
+    
+    # Run migrations
+    if migrations:
+        print(f"🔧 Running {len(migrations)} migration(s)...")
+        for migration in migrations:
+            try:
+                db.execute(text(migration))
+                db.commit()
+                print(f"   ✅ {migration}")
+            except Exception as e:
+                print(f"   ❌ Failed: {migration}")
+                print(f"      Error: {e}")
+                db.rollback()
+    else:
+        print("✅ Database schema is up to date")
 
 def init_db():
     from models import Base as ModelBase
@@ -190,6 +342,7 @@ def init_db():
 
     db = SessionLocal()
     try:
+        run_migrations(db)
         seed_defaults(db)
     finally:
         db.close()

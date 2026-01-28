@@ -687,3 +687,269 @@ async def get_recent_activity(
             for log in logs
         ]
     }
+
+# ==================== CAMPAIGN MANAGEMENT ====================
+
+@router.get("/campaigns")
+async def list_campaigns(
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Get all campaigns for admin management"""
+    from models import Campaign, EmailGenerationLog
+    from sqlalchemy import func
+    
+    campaigns = db.query(Campaign).order_by(
+        Campaign.display_order, Campaign.created_at.desc()
+    ).all()
+    
+    result = []
+    for campaign in campaigns:
+        # Count emails sent for this campaign
+        email_count = db.query(func.count(EmailGenerationLog.id)).filter(
+            EmailGenerationLog.campaign_id == campaign.id
+        ).scalar() or 0
+        
+        country = db.query(Country).filter(Country.code == campaign.country_code).first()
+        from data.top_countries import get_country_flag
+        
+        result.append({
+            "id": campaign.id,
+            "title": campaign.title,
+            "description": campaign.description,
+            "slug": campaign.slug,
+            "icon": campaign.icon or "🔥",
+            "country": {
+                "code": campaign.country_code,
+                "name": country.name if country else "",
+                "flag": get_country_flag(campaign.country_code)
+            },
+            "recipient_ids": campaign.recipient_ids,
+            "topic_ids": campaign.topic_ids,
+            "is_hot": campaign.is_hot,
+            "is_active": campaign.is_active,
+            "display_order": campaign.display_order,
+            "email_count": email_count,
+            "created_at": campaign.created_at.isoformat() if campaign.created_at else None
+        })
+    
+    return {"campaigns": result}
+
+
+@router.post("/campaigns")
+async def create_campaign(
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin)
+):
+    """Create a new campaign"""
+    from models import Campaign
+    
+    # Verify country exists
+    country = db.query(Country).filter(Country.code == payload["country_code"].upper()).first()
+    if not country:
+        raise HTTPException(status_code=400, detail="Invalid country code")
+    
+    # Verify recipients exist
+    from models import PoliticalRecipient
+    recipients = db.query(PoliticalRecipient).filter(
+        PoliticalRecipient.id.in_(payload["recipient_ids"])
+    ).all()
+    if len(recipients) != len(payload["recipient_ids"]):
+        raise HTTPException(status_code=400, detail="One or more recipients are invalid")
+    
+    # Verify topics exist
+    topics = db.query(AdvocacyTopic).filter(
+        AdvocacyTopic.id.in_(payload["topic_ids"])
+    ).all()
+    if len(topics) != len(payload["topic_ids"]):
+        raise HTTPException(status_code=400, detail="One or more topics are invalid")
+    
+    campaign = Campaign(
+        title=payload["title"],
+        description=payload.get("description", ""),
+        slug=payload["slug"],
+        icon=payload.get("icon", "🔥"),
+        country_code=payload["country_code"].upper(),
+        recipient_ids=payload["recipient_ids"],
+        topic_ids=payload["topic_ids"],
+        is_hot=payload.get("is_hot", False),
+        is_active=payload.get("is_active", True),
+        display_order=payload.get("display_order", 0),
+        created_by_admin_id=admin.id
+    )
+    
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+    
+    log_action(db, admin, "create", "campaign", campaign.id, {
+        "title": campaign.title,
+        "country": campaign.country_code
+    }, request)
+    db.commit()
+    
+    from data.top_countries import get_country_flag
+    return {
+        "id": campaign.id,
+        "title": campaign.title,
+        "description": campaign.description,
+        "slug": campaign.slug,
+        "icon": campaign.icon,
+        "country": {
+            "code": campaign.country_code,
+            "name": country.name,
+            "flag": get_country_flag(campaign.country_code)
+        },
+        "recipient_ids": campaign.recipient_ids,
+        "topic_ids": campaign.topic_ids,
+        "is_hot": campaign.is_hot,
+        "is_active": campaign.is_active,
+        "display_order": campaign.display_order
+    }
+
+
+@router.put("/campaigns/{campaign_id}")
+async def update_campaign(
+    campaign_id: int,
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin)
+):
+    """Update an existing campaign"""
+    from models import Campaign
+    
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    # Update fields
+    if "title" in payload:
+        campaign.title = payload["title"]
+    if "description" in payload:
+        campaign.description = payload["description"]
+    if "slug" in payload:
+        campaign.slug = payload["slug"]
+    if "icon" in payload:
+        campaign.icon = payload["icon"]
+    if "country_code" in payload:
+        country = db.query(Country).filter(Country.code == payload["country_code"].upper()).first()
+        if not country:
+            raise HTTPException(status_code=400, detail="Invalid country code")
+        campaign.country_code = payload["country_code"].upper()
+    if "recipient_ids" in payload:
+        from models import PoliticalRecipient
+        recipients = db.query(PoliticalRecipient).filter(
+            PoliticalRecipient.id.in_(payload["recipient_ids"])
+        ).all()
+        if len(recipients) != len(payload["recipient_ids"]):
+            raise HTTPException(status_code=400, detail="One or more recipients are invalid")
+        campaign.recipient_ids = payload["recipient_ids"]
+    if "topic_ids" in payload:
+        topics = db.query(AdvocacyTopic).filter(
+            AdvocacyTopic.id.in_(payload["topic_ids"])
+        ).all()
+        if len(topics) != len(payload["topic_ids"]):
+            raise HTTPException(status_code=400, detail="One or more topics are invalid")
+        campaign.topic_ids = payload["topic_ids"]
+    if "is_hot" in payload:
+        campaign.is_hot = payload["is_hot"]
+    if "is_active" in payload:
+        campaign.is_active = payload["is_active"]
+    if "display_order" in payload:
+        campaign.display_order = payload["display_order"]
+    
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+    
+    log_action(db, admin, "update", "campaign", campaign.id, {
+        "updated_fields": list(payload.keys())
+    }, request)
+    db.commit()
+    
+    country = db.query(Country).filter(Country.code == campaign.country_code).first()
+    from data.top_countries import get_country_flag
+    
+    return {
+        "id": campaign.id,
+        "title": campaign.title,
+        "description": campaign.description,
+        "slug": campaign.slug,
+        "icon": campaign.icon,
+        "country": {
+            "code": campaign.country_code,
+            "name": country.name if country else "",
+            "flag": get_country_flag(campaign.country_code)
+        },
+        "recipient_ids": campaign.recipient_ids,
+        "topic_ids": campaign.topic_ids,
+        "is_hot": campaign.is_hot,
+        "is_active": campaign.is_active,
+        "display_order": campaign.display_order
+    }
+
+
+@router.delete("/campaigns/{campaign_id}")
+async def delete_campaign(
+    campaign_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin)
+):
+    """Delete a campaign"""
+    from models import Campaign
+    
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    log_action(db, admin, "delete", "campaign", campaign.id, {
+        "title": campaign.title
+    }, request)
+    
+    db.delete(campaign)
+    db.commit()
+    
+    return {"message": "Campaign deleted successfully"}
+
+
+@router.get("/analytics/campaigns")
+async def get_campaign_analytics(
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Get analytics for all campaigns"""
+    from models import Campaign, EmailGenerationLog
+    from sqlalchemy import func
+    
+    campaigns = db.query(Campaign).all()
+    
+    results = []
+    for campaign in campaigns:
+        # Count total emails sent
+        email_count = db.query(func.count(EmailGenerationLog.id)).filter(
+            EmailGenerationLog.campaign_id == campaign.id
+        ).scalar() or 0
+        
+        # Get country distribution for this campaign
+        country_distribution = db.query(
+            EmailGenerationLog.selected_recipient_country,
+            func.count(EmailGenerationLog.id).label('count')
+        ).filter(
+            EmailGenerationLog.campaign_id == campaign.id
+        ).group_by(EmailGenerationLog.selected_recipient_country).all()
+        
+        results.append({
+            "campaign_id": campaign.id,
+            "campaign_title": campaign.title,
+            "email_count": email_count,
+            "country_distribution": [
+                {"country": country, "count": count}
+                for country, count in country_distribution
+            ]
+        })
+    
+    return {"campaign_analytics": results}

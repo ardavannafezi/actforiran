@@ -20,6 +20,7 @@ const state = {
     selectedTopics: new Set(),
     isResident: null,
     selectedCampaign: null,
+    campaignMode: false, // Track if user started from campaign
     generatedEmail: {
         subject: '',
         body: '',
@@ -67,16 +68,61 @@ function showNotification(message, type = 'info') {
 function initStepper() {
     console.log('🚀 ActForIran App Loaded - Safari Compatible');
     
+    // Load campaigns on page load
+    loadCampaigns();
+    
+    // Choice buttons
+    const campaignChoice = document.getElementById('campaignChoice');
+    const customChoice = document.getElementById('customChoice');
+    const campaignsSection = document.getElementById('campaignsSection');
+    const stepsPreview = document.getElementById('stepsPreview');
+    const choiceSection = document.getElementById('choiceSection');
+    const backToChoice = document.getElementById('backToChoice');
+    const backToChoiceCustom = document.getElementById('backToChoiceCustom');
+    
+    if (campaignChoice) {
+        campaignChoice.onclick = function() {
+            choiceSection.style.display = 'none';
+            campaignsSection.style.display = 'block';
+            stepsPreview.style.display = 'none';
+        };
+    }
+    
+    if (customChoice) {
+        customChoice.onclick = function() {
+            choiceSection.style.display = 'none';
+            campaignsSection.style.display = 'none';
+            stepsPreview.style.display = 'block';
+        };
+    }
+    
+    if (backToChoice) {
+        backToChoice.onclick = function() {
+            choiceSection.style.display = 'block';
+            campaignsSection.style.display = 'none';
+            stepsPreview.style.display = 'none';
+        };
+    }
+    
+    if (backToChoiceCustom) {
+        backToChoiceCustom.onclick = function() {
+            choiceSection.style.display = 'block';
+            campaignsSection.style.display = 'none';
+            stepsPreview.style.display = 'none';
+        };
+    }
+    
     // Safari Fix: Use onclick instead of addEventListener
     if (elements.startBtn) {
         elements.startBtn.onclick = function(e) {
             e.preventDefault();
-            console.log('🎯 Start button clicked');
+            console.log('🎯 Start button clicked (Custom Mode)');
+            state.campaignMode = false;
+            state.selectedCampaign = null;
             document.querySelector('.hero').style.display = 'none';
             elements.stepperContainer.classList.add('active');
             loadCountries();
             loadTopics();
-            loadCampaigns();
         };
     }
     
@@ -288,29 +334,72 @@ function renderCampaigns() {
         return;
     }
     
-    campaignsSection.style.display = 'block';
+    // Filter to show only top 5 hot campaigns
+    const hotCampaigns = state.campaigns
+        .filter(c => c.is_hot && c.is_active)
+        .sort((a, b) => a.display_order - b.display_order)
+        .slice(0, 5);
     
-    campaignsList.innerHTML = state.campaigns.map(campaign => `
-        <div class=\"campaign-card\" onclick=\"selectCampaign(${campaign.id})\" data-campaign-id=\"${campaign.id}\">
-            <div class=\"campaign-icon\">${campaign.icon}</div>
-            <div class=\"campaign-title\">${campaign.title}</div>
-            <div class=\"campaign-desc\">${campaign.description || ''}</div>
-            <div class=\"campaign-country\">
-                <span>${campaign.country.flag}</span>
-                <span>${campaign.country.name}</span>
+    if (hotCampaigns.length === 0) {
+        campaignsSection.style.display = 'none';
+        return;
+    }
+    
+    campaignsList.innerHTML = hotCampaigns.map(campaign => `
+        <div class="campaign-card" onclick="selectCampaign(${campaign.id})" data-campaign-id="${campaign.id}">
+            <div class="campaign-header">
+                <div class="campaign-icon">${campaign.icon}</div>
+                <div class="campaign-info">
+                    <div class="campaign-title">${campaign.title}</div>
+                    <div class="campaign-country">
+                        <span>${campaign.country.flag}</span>
+                        <span>${campaign.country.name}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="campaign-description">${campaign.description || ''}</div>
+            <div class="campaign-meta">
+                <div class="campaign-meta-item">
+                    <span>👥</span>
+                    <span>${campaign.recipient_ids.length} گیرنده</span>
+                </div>
+                <div class="campaign-meta-item">
+                    <span>📝</span>
+                    <span>${campaign.topic_ids.length} موضوع</span>
+                </div>
             </div>
         </div>
     `).join('');
 }
 
-function selectCampaign(campaignId) {
+async function selectCampaign(campaignId) {
     const campaign = state.campaigns.find(c => c.id === campaignId);
     if (!campaign) return;
+    
+    console.log('🔥 Campaign selected:', campaign.title);
+    
+    // Set campaign mode
+    state.campaignMode = true;
+    state.selectedCampaign = campaign.id;
     
     // Pre-fill selections
     state.selectedCountry = campaign.country.code;
     state.selectedRecipients = new Set(campaign.recipient_ids);
     state.selectedTopics = new Set(campaign.topic_ids);
+    
+    // Hide hero, show stepper
+    document.querySelector('.hero').style.display = 'none';
+    elements.stepperContainer.classList.add('active');
+    
+    // Load data and move to step 3 (residency) since country/recipients/topics are pre-selected
+    await loadCountries();
+    await loadTopics();
+    
+    // Auto-load recipients for the campaign country
+    await loadRecipients(campaign.country.code);
+    
+    // Jump to step 3 (residency/name step)
+    goToStep(3);
     state.selectedCampaign = campaignId;
     
     // Start the stepper with pre-filled data
@@ -335,7 +424,8 @@ async function generateEmail() {
         recipient_ids: Array.from(state.selectedRecipients),
         topic_ids: Array.from(state.selectedTopics),
         is_resident: state.isResident,
-        user_name: userName || null
+        user_name: userName || null,
+        campaign_id: state.selectedCampaign || null
     };
     
     try {

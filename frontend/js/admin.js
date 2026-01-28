@@ -504,3 +504,331 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check auth
     checkAuth();
 });
+// ============================================
+// CAMPAIGN MANAGEMENT
+// ============================================
+let campaigns = [];
+let campaignTopics = [];
+let campaignRecipients = [];
+
+async function loadCampaigns() {
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/admin/campaigns`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load campaigns');
+        
+        const data = await response.json();
+        campaigns = data.campaigns || [];
+        renderCampaigns();
+        
+    } catch (error) {
+        console.error('Error loading campaigns:', error);
+        showNotification('خطا در بارگذاری کمپین‌ها', 'error');
+    }
+}
+
+function renderCampaigns() {
+    const list = document.getElementById('campaignsAdminList');
+    if (!list) return;
+    
+    if (campaigns.length === 0) {
+        list.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">هیچ کمپینی یافت نشد</p>';
+        return;
+    }
+    
+    list.innerHTML = campaigns.map(campaign => `
+        <div class="campaign-admin-card ${campaign.is_hot ? 'is-hot' : ''}">
+            <div class="campaign-admin-header">
+                <div class="campaign-admin-icon">${campaign.icon}</div>
+                <div class="campaign-admin-info">
+                    <div class="campaign-admin-title">${campaign.title}</div>
+                    <div class="campaign-admin-country">
+                        <span>${campaign.country.flag}</span>
+                        <span>${campaign.country.name}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="campaign-admin-description">${campaign.description || ''}</div>
+            <div class="campaign-admin-stats">
+                <span>📧 ${campaign.email_count || 0} ایمیل</span>
+                <span>👥 ${campaign.recipient_ids.length} گیرنده</span>
+                <span>📝 ${campaign.topic_ids.length} موضوع</span>
+                ${campaign.is_hot ? '<span style="color: var(--accent-red);">🔥 داغ</span>' : ''}
+            </div>
+            <div class="campaign-admin-actions">
+                <button class="btn btn-secondary" onclick="editCampaign(${campaign.id})">ویرایش</button>
+                <button class="btn btn-error" onclick="deleteCampaign(${campaign.id})">حذف</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function openCampaignModal(campaignId = null) {
+    const modal = document.getElementById('campaignModal');
+    const title = document.getElementById('campaignModalTitle');
+    const form = document.getElementById('campaignForm');
+    
+    // Load countries, recipients, topics for selects
+    await loadCountries();
+    await loadAllTopics();
+    
+    // Populate country select
+    const countrySelect = document.getElementById('campaignCountry');
+    countrySelect.innerHTML = '<option value="">انتخاب کشور...</option>' + 
+        countries.map(c => `<option value="${c.code}">${c.flag} ${c.name}</option>`).join('');
+    
+    // Populate topics select
+    const topicsSelect = document.getElementById('campaignTopics');
+    topicsSelect.innerHTML = campaignTopics.map(t => 
+        `<option value="${t.id}">${t.display_title}</option>`
+    ).join('');
+    
+    if (campaignId) {
+        // Edit mode
+        const campaign = campaigns.find(c => c.id === campaignId);
+        if (!campaign) return;
+        
+        title.textContent = 'ویرایش کمپین';
+        document.getElementById('campaignId').value = campaign.id;
+        document.getElementById('campaignTitle').value = campaign.title;
+        document.getElementById('campaignSlug').value = campaign.slug;
+        document.getElementById('campaignDescription').value = campaign.description || '';
+        document.getElementById('campaignIcon').value = campaign.icon || '';
+        document.getElementById('campaignCountry').value = campaign.country.code;
+        document.getElementById('campaignIsHot').checked = campaign.is_hot;
+        document.getElementById('campaignDisplayOrder').value = campaign.display_order || 0;
+        
+        // Load recipients for this country
+        await loadRecipientsForCountry(campaign.country.code);
+        
+        // Select recipients
+        Array.from(document.getElementById('campaignRecipients').options).forEach(opt => {
+            opt.selected = campaign.recipient_ids.includes(parseInt(opt.value));
+        });
+        
+        // Select topics
+        Array.from(document.getElementById('campaignTopics').options).forEach(opt => {
+            opt.selected = campaign.topic_ids.includes(parseInt(opt.value));
+        });
+    } else {
+        // Add mode
+        title.textContent = 'افزودن کمپین';
+        form.reset();
+        document.getElementById('campaignId').value = '';
+        document.getElementById('campaignRecipients').innerHTML = '<option value="">ابتدا کشور را انتخاب کنید</option>';
+    }
+    
+    modal.classList.add('active');
+}
+
+async function loadAllTopics() {
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/admin/topics`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load topics');
+        
+        const data = await response.json();
+        campaignTopics = data.topics || [];
+        
+    } catch (error) {
+        console.error('Error loading topics:', error);
+    }
+}
+
+async function loadRecipientsForCountry(countryCode) {
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/admin/recipients?country_code=${countryCode}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load recipients');
+        
+        const data = await response.json();
+        campaignRecipients = data.recipients || [];
+        
+        // Populate recipients select
+        const recipientsSelect = document.getElementById('campaignRecipients');
+        recipientsSelect.innerHTML = campaignRecipients.map(r => 
+            `<option value="${r.id}">${r.full_name} - ${r.display_title}</option>`
+        ).join('');
+        
+    } catch (error) {
+        console.error('Error loading recipients:', error);
+    }
+}
+
+// Handle country change to load recipients
+document.addEventListener('DOMContentLoaded', () => {
+    const countrySelect = document.getElementById('campaignCountry');
+    if (countrySelect) {
+        countrySelect.addEventListener('change', async (e) => {
+            if (e.target.value) {
+                await loadRecipientsForCountry(e.target.value);
+            } else {
+                document.getElementById('campaignRecipients').innerHTML = '<option value="">ابتدا کشور را انتخاب کنید</option>';
+            }
+        });
+    }
+});
+
+async function saveCampaign(e) {
+    e.preventDefault();
+    
+    const campaignId = document.getElementById('campaignId').value;
+    const recipientIds = Array.from(document.getElementById('campaignRecipients').selectedOptions).map(opt => parseInt(opt.value));
+    const topicIds = Array.from(document.getElementById('campaignTopics').selectedOptions).map(opt => parseInt(opt.value));
+    
+    if (recipientIds.length === 0) {
+        showNotification('حداقل یک گیرنده انتخاب کنید', 'error');
+        return;
+    }
+    
+    if (topicIds.length === 0) {
+        showNotification('حداقل یک موضوع انتخاب کنید', 'error');
+        return;
+    }
+    
+    const payload = {
+        title: document.getElementById('campaignTitle').value,
+        slug: document.getElementById('campaignSlug').value,
+        description: document.getElementById('campaignDescription').value || '',
+        icon: document.getElementById('campaignIcon').value || '🔥',
+        country_code: document.getElementById('campaignCountry').value,
+        recipient_ids: recipientIds,
+        topic_ids: topicIds,
+        is_hot: document.getElementById('campaignIsHot').checked,
+        display_order: parseInt(document.getElementById('campaignDisplayOrder').value) || 0,
+        is_active: true
+    };
+    
+    try {
+        const url = campaignId 
+            ? `${API_BASE}/api/v1/admin/campaigns/${campaignId}`
+            : `${API_BASE}/api/v1/admin/campaigns`;
+        const method = campaignId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to save campaign');
+        }
+        
+        closeModal('campaignModal');
+        await loadCampaigns();
+        showNotification(campaignId ? 'کمپین ویرایش شد' : 'کمپین ایجاد شد', 'success');
+        
+    } catch (error) {
+        console.error('Error saving campaign:', error);
+        showNotification('خطا در ذخیره کمپین', 'error');
+    }
+}
+
+async function editCampaign(campaignId) {
+    await openCampaignModal(campaignId);
+}
+
+async function deleteCampaign(campaignId) {
+    if (!confirm('آیا از حذف این کمپین اطمینان دارید?')) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/admin/campaigns/${campaignId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to delete campaign');
+        
+        await loadCampaigns();
+        showNotification('کمپین حذف شد', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting campaign:', error);
+        showNotification('خطا در حذف کمپین', 'error');
+    }
+}
+
+// Setup campaign form
+document.addEventListener('DOMContentLoaded', () => {
+    const addCampaignBtn = document.getElementById('addCampaignBtn');
+    if (addCampaignBtn) {
+        addCampaignBtn.addEventListener('click', () => openCampaignModal());
+    }
+    
+    const campaignForm = document.getElementById('campaignForm');
+    if (campaignForm) {
+        campaignForm.addEventListener('submit', saveCampaign);
+    }
+});
+
+// Load campaigns analytics
+async function loadCampaignAnalytics() {
+    try {
+        const [overview, campaignStats] = await Promise.all([
+            fetch(`${API_BASE}/api/v1/admin/analytics/overview`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).then(r => r.json()),
+            fetch(`${API_BASE}/api/v1/admin/analytics/campaigns`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).then(r => r.json())
+        ]);
+        
+        // Update overview stats
+        document.getElementById('analyticsTotal').textContent = toPersian(overview.total_emails || 0);
+        document.getElementById('analyticsSuccess').textContent = overview.success_rate || '0%';
+        
+        // Render campaign analytics
+        const list = document.getElementById('campaignAnalyticsList');
+        if (list && campaignStats.campaign_analytics) {
+            list.innerHTML = campaignStats.campaign_analytics.map(ca => `
+                <div class="stat-card" style="margin-bottom: 12px;">
+                    <div class="stat-label">${ca.campaign_title}</div>
+                    <div class="stat-value">${toPersian(ca.email_count)} ایمیل</div>
+                </div>
+            `).join('');
+        }
+        
+        // Load top countries
+        const topCountries = await fetch(`${API_BASE}/api/v1/admin/analytics/top-countries`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json());
+        
+        const topCountriesList = document.getElementById('topCountriesList');
+        if (topCountriesList && topCountries.top_countries) {
+            topCountriesList.innerHTML = topCountries.top_countries.slice(0, 10).map(tc => `
+                <tr>
+                    <td>${tc.country}</td>
+                    <td>${toPersian(tc.email_count)}</td>
+                </tr>
+            `).join('');
+        }
+        
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+    }
+}
+
+// Load analytics when tab is clicked
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.admin-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            if (tab.dataset.tab === 'analytics') {
+                loadCampaignAnalytics();
+            }
+            if (tab.dataset.tab === 'campaigns') {
+                loadCampaigns();
+            }
+        });
+    });
+});

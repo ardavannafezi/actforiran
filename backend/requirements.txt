@@ -24,6 +24,9 @@ slowapi==0.1.9
 # HTTP client
 httpx==0.26.0
 
+# Geolocation
+geoip2==4.8.0
+
 # Environment
 python-dotenv==1.0.1
 

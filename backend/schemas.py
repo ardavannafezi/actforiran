@@ -41,8 +41,7 @@ class GenerateEmailRequest(BaseModel):
     topic_ids: List[int] = Field(..., min_length=1)
     is_resident: bool
     user_name: Optional[str] = None
-    topic_ids: List[int] = Field(..., min_length=1)
-    is_resident: bool
+    campaign_id: Optional[int] = None  # Track which campaign was used
 
 
 class RecipientEmailOut(BaseModel):

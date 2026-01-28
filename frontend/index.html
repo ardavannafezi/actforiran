@@ -38,47 +38,66 @@
                 <h1>صدای شما را به جهان برسانید</h1>
                 <p>با ارسال ایمیل به سیاستمداران جهان، از حقوق مردم ایران دفاع کنید</p>
                 
-                <!-- Hot Campaigns -->
+                <!-- Choice: Campaign or Custom -->
+                <div class="choice-section" id="choiceSection">
+                    <div class="choice-cards">
+                        <div class="choice-card" id="campaignChoice">
+                            <div class="choice-icon">🔥</div>
+                            <h3>پیوستن به کمپین</h3>
+                            <p>از کمپین‌های آماده استفاده کنید</p>
+                            <button class="btn btn-secondary">کمپین‌ها را ببینید</button>
+                        </div>
+                        <div class="choice-card" id="customChoice">
+                            <div class="choice-icon">✨</div>
+                            <h3>ساخت کمپین سفارشی</h3>
+                            <p>ایمیل خود را شخصی‌سازی کنید</p>
+                            <button class="btn btn-secondary">شروع کنید</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hot Campaigns (shown when campaign choice is selected) -->
                 <div class="campaigns-section" id="campaignsSection" style="display: none;">
-                    <h3 style="margin-bottom: 16px; font-size: 18px;">🔥 کمپین‌های داغ</h3>
+                    <button class="btn btn-text" id="backToChoice">← بازگشت به انتخاب</button>
+                    <h3 style="margin: 16px 0; font-size: 20px;">🔥 کمپین‌های داغ</h3>
                     <div class="campaigns-grid" id="campaignsList"></div>
-                    <div style="text-align: center; margin: 16px 0;">
-                        <span style="color: var(--text-secondary); font-size: 14px;">یا کمپین شخصی خود را بسازید ↓</span>
-                    </div>
                 </div>
                 
-                <!-- Visual Steps Preview -->
-                <div class="hero-steps">
-                    <div class="hero-step">
-                        <div class="hero-step-icon">🌍</div>
-                        <div class="hero-step-title">انتخاب کشور</div>
-                        <div class="hero-step-desc">کشور مقصد را انتخاب کنید</div>
+                <!-- Visual Steps Preview (shown when custom choice is selected) -->
+                <div class="hero-steps" id="stepsPreview" style="display: none;">
+                    <button class="btn btn-text" id="backToChoiceCustom">← بازگشت به انتخاب</button>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px;">
+                        <div class="hero-step">
+                            <div class="hero-step-icon">🌍</div>
+                            <div class="hero-step-title">انتخاب کشور</div>
+                            <div class="hero-step-desc">کشور مقصد را انتخاب کنید</div>
+                        </div>
+                        <div class="hero-step-arrow">→</div>
+                        <div class="hero-step">
+                            <div class="hero-step-icon">👥</div>
+                            <div class="hero-step-title">انتخاب گیرندگان</div>
+                            <div class="hero-step-desc">سیاستمداران را انتخاب کنید</div>
+                        </div>
+                        <div class="hero-step-arrow">→</div>
+                        <div class="hero-step">
+                            <div class="hero-step-icon">📝</div>
+                            <div class="hero-step-title">موضوعات</div>
+                            <div class="hero-step-desc">موضوعات حمایتی را انتخاب کنید</div>
+                        </div>
+                        <div class="hero-step-arrow">→</div>
+                        <div class="hero-step">
+                            <div class="hero-step-icon">✉️</div>
+                            <div class="hero-step-title">ارسال ایمیل</div>
+                            <div class="hero-step-desc">ایمیل خود را بفرستید</div>
+                        </div>
                     </div>
-                    <div class="hero-step-arrow">→</div>
-                    <div class="hero-step">
-                        <div class="hero-step-icon">👥</div>
-                        <div class="hero-step-title">انتخاب گیرندگان</div>
-                        <div class="hero-step-desc">سیاستمداران را انتخاب کنید</div>
-                    </div>
-                    <div class="hero-step-arrow">→</div>
-                    <div class="hero-step">
-                        <div class="hero-step-icon">📝</div>
-                        <div class="hero-step-title">موضوعات</div>
-                        <div class="hero-step-desc">موضوعات حمایتی را انتخاب کنید</div>
-                    </div>
-                    <div class="hero-step-arrow">→</div>
-                    <div class="hero-step">
-                        <div class="hero-step-icon">✉️</div>
-                        <div class="hero-step-title">ارسال ایمیل</div>
-                        <div class="hero-step-desc">ایمیل خود را بفرستید</div>
-                    </div>
+                    
+                    <button class="btn btn-primary btn-large" id="startBtn" style="margin-top: 24px;">
+                        <span class="btn-icon">🚀</span>
+                        شروع کمپین سفارشی
+                        <span class="btn-icon">←</span>
+                    </button>
                 </div>
-                
-                <button class="btn btn-primary btn-large" id="startBtn">
-                    <span class="btn-icon">🚀</span>
-                    شروع کمپین
-                    <span class="btn-icon">←</span>
-                </button>
                 
                 <p style="margin-top: 20px; font-size: 14px; color: var(--text-secondary);">
                     ⚡ فقط ۵ دقیقه وقت می‌برد | 🔒 کاملاً امن و خصوصی | 🌟 بدون نیاز به ثبت‌نام

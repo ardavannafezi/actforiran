@@ -115,9 +115,11 @@ class EmailGenerationLog(Base):
     __tablename__ = "email_generation_logs"
 
     id = Column(Integer, primary_key=True, index=True)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True)  # Track campaign usage
     sender_ip_address = Column(INET, nullable=True)
     sender_country_code = Column(String(3), nullable=True)
     sender_country_name = Column(String(100), nullable=True)
+    sender_user_name = Column(String(255), nullable=True)  # Track user name
     is_country_resident = Column(Boolean, nullable=True)
     selected_recipient_country = Column(String(100), nullable=True)
     recipient_ids = Column(ARRAY(Integer), nullable=True)
@@ -129,6 +131,9 @@ class EmailGenerationLog(Base):
     ai_model_used = Column(String(50), nullable=True)
     ai_tokens_used = Column(Integer, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+    
+    # Relationships
+    campaign = relationship("Campaign")
 
 
 class AdminActivityLog(Base):

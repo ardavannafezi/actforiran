@@ -1,41 +1,81 @@
 """
-Top 60 Most Influential Countries by Political Power, Economic Influence, and Global Impact
-Includes country codes, names, and flag emojis
+All European Countries + Major Global Powers
+Includes all 44 European countries plus influential countries worldwide
 """
 
 TOP_COUNTRIES = [
-    # G7 Countries
+    # G7 Countries (Non-European)
     {"code": "USA", "name": "United States", "flag": "🇺🇸"},
+    {"code": "JPN", "name": "Japan", "flag": "🇯🇵"},
+    {"code": "CAN", "name": "Canada", "flag": "🇨🇦"},
+    
+    # All European Countries (44 countries)
+    # Western Europe
     {"code": "GBR", "name": "United Kingdom", "flag": "🇬🇧"},
     {"code": "DEU", "name": "Germany", "flag": "🇩🇪"},
     {"code": "FRA", "name": "France", "flag": "🇫🇷"},
-    {"code": "JPN", "name": "Japan", "flag": "🇯🇵"},
     {"code": "ITA", "name": "Italy", "flag": "🇮🇹"},
-    {"code": "CAN", "name": "Canada", "flag": "🇨🇦"},
-    
-    # Major European Powers
     {"code": "ESP", "name": "Spain", "flag": "🇪🇸"},
     {"code": "NLD", "name": "Netherlands", "flag": "🇳🇱"},
     {"code": "CHE", "name": "Switzerland", "flag": "🇨🇭"},
-    {"code": "SWE", "name": "Sweden", "flag": "🇸🇪"},
-    {"code": "POL", "name": "Poland", "flag": "🇵🇱"},
     {"code": "BEL", "name": "Belgium", "flag": "🇧🇪"},
     {"code": "AUT", "name": "Austria", "flag": "🇦🇹"},
+    {"code": "IRL", "name": "Ireland", "flag": "🇮🇪"},
+    {"code": "PRT", "name": "Portugal", "flag": "🇵🇹"},
+    {"code": "LUX", "name": "Luxembourg", "flag": "🇱🇺"},
+    {"code": "MCO", "name": "Monaco", "flag": "🇲🇨"},
+    {"code": "LIE", "name": "Liechtenstein", "flag": "🇱🇮"},
+    {"code": "AND", "name": "Andorra", "flag": "🇦🇩"},
+    {"code": "SMR", "name": "San Marino", "flag": "🇸🇲"},
+    {"code": "VAT", "name": "Vatican City", "flag": "🇻🇦"},
+    
+    # Nordic Countries
+    {"code": "SWE", "name": "Sweden", "flag": "🇸🇪"},
     {"code": "NOR", "name": "Norway", "flag": "🇳🇴"},
     {"code": "DNK", "name": "Denmark", "flag": "🇩🇰"},
     {"code": "FIN", "name": "Finland", "flag": "🇫🇮"},
-    {"code": "IRL", "name": "Ireland", "flag": "🇮🇪"},
-    {"code": "PRT", "name": "Portugal", "flag": "🇵🇹"},
-    {"code": "GRC", "name": "Greece", "flag": "🇬🇷"},
+    {"code": "ISL", "name": "Iceland", "flag": "🇮🇸"},
+    
+    # Eastern Europe
+    {"code": "POL", "name": "Poland", "flag": "🇵🇱"},
     {"code": "CZE", "name": "Czech Republic", "flag": "🇨🇿"},
+    {"code": "HUN", "name": "Hungary", "flag": "🇭🇺"},
     {"code": "ROU", "name": "Romania", "flag": "🇷🇴"},
+    {"code": "BGR", "name": "Bulgaria", "flag": "🇧🇬"},
+    {"code": "SVK", "name": "Slovakia", "flag": "🇸🇰"},
+    {"code": "UKR", "name": "Ukraine", "flag": "🇺🇦"},
+    {"code": "BLR", "name": "Belarus", "flag": "🇧🇾"},
+    {"code": "MDA", "name": "Moldova", "flag": "🇲🇩"},
+    {"code": "RUS", "name": "Russia", "flag": "🇷🇺"},
+    
+    # Baltic States
+    {"code": "EST", "name": "Estonia", "flag": "🇪🇪"},
+    {"code": "LVA", "name": "Latvia", "flag": "🇱🇻"},
+    {"code": "LTU", "name": "Lithuania", "flag": "🇱🇹"},
+    
+    # Southern Europe
+    {"code": "GRC", "name": "Greece", "flag": "🇬🇷"},
+    {"code": "HRV", "name": "Croatia", "flag": "🇭🇷"},
+    {"code": "SVN", "name": "Slovenia", "flag": "🇸🇮"},
+    {"code": "SRB", "name": "Serbia", "flag": "🇷🇸"},
+    {"code": "BIH", "name": "Bosnia and Herzegovina", "flag": "🇧🇦"},
+    {"code": "MNE", "name": "Montenegro", "flag": "🇲🇪"},
+    {"code": "MKD", "name": "North Macedonia", "flag": "🇲🇰"},
+    {"code": "ALB", "name": "Albania", "flag": "🇦🇱"},
+    {"code": "MLT", "name": "Malta", "flag": "🇲🇹"},
+    {"code": "CYP", "name": "Cyprus", "flag": "🇨🇾"},
+    
+    {"code": "CYP", "name": "Cyprus", "flag": "🇨🇾"},
+    {"code": "KOS", "name": "Kosovo", "flag": "🇽🇰"},
+    
+    # Turkey (Transcontinental)
+    {"code": "TUR", "name": "Turkey", "flag": "🇹🇷"},
     
     # Major Asian Powers
     {"code": "CHN", "name": "China", "flag": "🇨🇳"},
     {"code": "IND", "name": "India", "flag": "🇮🇳"},
     {"code": "KOR", "name": "South Korea", "flag": "🇰🇷"},
     {"code": "IDN", "name": "Indonesia", "flag": "🇮🇩"},
-    {"code": "TUR", "name": "Turkey", "flag": "🇹🇷"},
     {"code": "SAU", "name": "Saudi Arabia", "flag": "🇸🇦"},
     {"code": "ARE", "name": "United Arab Emirates", "flag": "🇦🇪"},
     {"code": "ISR", "name": "Israel", "flag": "🇮🇱"},
@@ -69,14 +109,6 @@ TOP_COUNTRIES = [
     {"code": "QAT", "name": "Qatar", "flag": "🇶🇦"},
     {"code": "KWT", "name": "Kuwait", "flag": "🇰🇼"},
     {"code": "JOR", "name": "Jordan", "flag": "🇯🇴"},
-    
-    # Other Influential Countries
-    {"code": "RUS", "name": "Russia", "flag": "🇷🇺"},
-    {"code": "UKR", "name": "Ukraine", "flag": "🇺🇦"},
-    {"code": "HUN", "name": "Hungary", "flag": "🇭🇺"},
-    {"code": "HRV", "name": "Croatia", "flag": "🇭🇷"},
-    {"code": "SVK", "name": "Slovakia", "flag": "🇸🇰"},
-    {"code": "LUX", "name": "Luxembourg", "flag": "🇱🇺"},
 ]
 
 def get_country_flag(code: str) -> str:
