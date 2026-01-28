@@ -27,31 +27,13 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# CORS Configuration - Allow frontend domain
-FRONTEND_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:8080", 
-    "http://localhost:5173",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8080",
-    "http://127.0.0.1:5173",
-    "https://actforiran.pages.dev",  # Cloudflare Pages preview
-    "https://*.pages.dev",  # Cloudflare Pages
-]
-
-# Add user's domain when provided
-FRONTEND_URL = os.getenv("FRONTEND_URL")
-if FRONTEND_URL:
-    FRONTEND_ORIGINS.append(FRONTEND_URL)
-    FRONTEND_ORIGINS.append(FRONTEND_URL.replace("https://", "http://"))
-
+# CORS Configuration - FIXED for Railway deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=FRONTEND_ORIGINS + ["*"],  # Allow all for now, restrict in production
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"]
 )
 
 # Rate limiting

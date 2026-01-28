@@ -3,7 +3,9 @@
  * Persian RTL Frontend with 5-Step Stepper Form
  */
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : 'https://back.actforiran.org';
 
 // Application State
 const state = {
