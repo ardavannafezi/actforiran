@@ -3,252 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عمل برای ایران | انقلاب ۲۰۲۶</title>
-    <meta name="description" content="پلتفرم فارسی برای تولید ایمیل‌های حمایتی شخصی‌سازی شده به رهبران جهان درباره بحران حقوق بشر ایران. مرکز خبری انقلاب ۲۰۲۶">
-    <meta name="keywords" content="ایران، انقلاب ۲۰۲۶، حقوق بشر، ایمیل حمایتی، کمپین جهانی">
-    <meta name="author" content="ActForIran">
-    <meta property="og:title" content="عمل برای ایران | انقلاب ۲۰۲۶">
-    <meta property="og:description" content="صدای ایران باشید. ایمیل‌های شخصی‌سازی شده به رهبران جهان ارسال کنید.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://actforiran.org/">
-    <meta name="robots" content="index,follow">
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "ActForIran",
-      "url": "https://actforiran.org/",
-      "description": "پلتفرم فارسی حمایت از انقلاب ۲۰۲۶ و ارسال ایمیل‌های تأثیرگذار به رهبران جهان"
-    }
-    </script>
+    <title>عمل برای ایران | ActForIran</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="bg-ornament"></div>
-    <div class="bg-grid"></div>
-    <div class="noise-overlay"></div>
-
-    <main class="shell">
-        <header class="hero">
-            <div class="topbar">
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
                 <div class="logo">
-                    <span class="logo-mark">عای</span>
-                    <div>
+                    <span class="logo-icon">🇮🇷</span>
+                    <div class="logo-text">
                         <strong>عمل برای ایران</strong>
-                        <small>خبرگزاری انقلاب ۲۰۲۶</small>
+                        <small>انقلاب ۲۰۲۶</small>
                     </div>
                 </div>
-                <div class="status-bar">
-                    <div id="connectionStatus" class="connection-status offline">
-                        <span class="status-dot"></span>
-                        <span class="status-text">در حال اتصال...</span>
-                    </div>
-                    <div class="badge">بتا</div>
-                </div>
+                <nav class="nav">
+                    <a href="admin.html" class="nav-link">پنل مدیریت</a>
+                </nav>
             </div>
-
-            <div class="ticker" aria-live="polite">
-                <span>فوری</span>
-                <p>مرکز رسمی حمایت بین‌المللی — انقلاب ایران ۲۰۲۶</p>
-            </div>
-
-            <span class="eyebrow">پلتفرم حمایت جهانی</span>
-            <h1>صدای ایران باشید</h1>
-            <p class="lead">
-                در دقایقی ایمیل محترمانه و تأثیرگذار به رهبران جهان تولید کنید.
-                این کمپین از انقلاب ۲۰۲۶ حمایت می‌کند و خواستار پایان سرکوب سیستماتیک است.
-            </p>
         </header>
 
-        <section class="start-panel" aria-label="شروع مسیر">
-            <button class="start-card" id="startCampaigns">
-                <span class="start-icon">🔥</span>
-                <div>
-                    <h2>کمپین‌های فعال</h2>
-                    <p>کمپین‌های آماده تنظیم شده توسط مدیران</p>
-                </div>
-            </button>
-            <button class="start-card" id="startCountry">
-                <span class="start-icon">🌍</span>
-                <div>
-                    <h2>انتخاب کشور</h2>
-                    <p>کشور مقصد را انتخاب کرده و گیرندگان رسمی را تعیین کنید</p>
-                </div>
-            </button>
-        </section>
+        <!-- Breaking News Ticker -->
+        <div class="ticker">
+            <span class="ticker-label">فوری</span>
+            <p class="ticker-text">مرکز رسمی حمایت بین‌المللی — صدای شما به گوش جهان می‌رسد</p>
+        </div>
 
-        <section class="stepper" id="stepper" aria-hidden="true">
-            <div class="stepper-track">
-                <div class="step" data-step="1">
-                    <span>۱</span>
-                    <p>کشور</p>
-                </div>
-                <div class="step" data-step="2">
-                    <span>۲</span>
-                    <p>گیرندگان</p>
-                </div>
-                <div class="step" data-step="3">
-                    <span>۳</span>
-                    <p>اقامت</p>
-                </div>
-                <div class="step" data-step="4">
-                    <span>۴</span>
-                    <p>موضوعات</p>
-                </div>
-                <div class="step" data-step="5">
-                    <span>۵</span>
-                    <p>ایمیل</p>
-                </div>
-                <div class="progress-line"><span></span></div>
-            </div>
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Hero Section -->
+            <section class="hero">
+                <h1>صدای شما را به جهان برسانید</h1>
+                <p>با ارسال ایمیل به سیاستمداران جهان، از حقوق مردم ایران دفاع کنید</p>
+                <button class="btn btn-primary btn-large" id="startBtn">
+                    شروع کمپین
+                    <span class="btn-icon">←</span>
+                </button>
+            </section>
 
-            <div class="stepper-panels">
-                <section class="panel" data-panel="1">
-                    <div class="panel-header">
-                        <h3>انتخاب کشور مقصد</h3>
-                        <p>کشوری که قصد ارسال ایمیل به مقامات آن را دارید</p>
-                    </div>
-                    <div class="form-group">
-                        <select id="countrySelect">
-                            <option value="">یک کشور انتخاب کنید...</option>
-                        </select>
-                    </div>
-                </section>
+            <!-- Stepper Form -->
+            <section class="stepper-container" id="stepperContainer">
+                <!-- Progress Bar -->
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
 
-                <section class="panel" data-panel="2">
-                    <div class="panel-header">
-                        <h3>انتخاب گیرندگان</h3>
-                        <p>مقامات رسمی‌ای که ایمیل به آنان ارسال خواهد شد</p>
+                <!-- Step Indicators -->
+                <div class="step-indicators">
+                    <div class="step-indicator active" data-step="1">
+                        <span class="step-number">۱</span>
+                        <span class="step-label">کشور</span>
                     </div>
-                    <div id="recipientsList" class="recipients-grid"></div>
-                </section>
+                    <div class="step-indicator" data-step="2">
+                        <span class="step-number">۲</span>
+                        <span class="step-label">گیرندگان</span>
+                    </div>
+                    <div class="step-indicator" data-step="3">
+                        <span class="step-number">۳</span>
+                        <span class="step-label">اقامت</span>
+                    </div>
+                    <div class="step-indicator" data-step="4">
+                        <span class="step-number">۴</span>
+                        <span class="step-label">موضوعات</span>
+                    </div>
+                    <div class="step-indicator" data-step="5">
+                        <span class="step-number">۵</span>
+                        <span class="step-label">ایمیل</span>
+                    </div>
+                </div>
 
-                <section class="panel" data-panel="3">
-                    <div class="panel-header">
-                        <h3>وضعیت اقامت</h3>
-                        <p>آیا در کشور انتخاب شده ساکن هستید؟</p>
-                    </div>
-                    <div class="radio-group">
-                        <label class="radio-card">
-                            <input type="radio" name="resident" value="yes">
-                            <div class="radio-content">
-                                <span class="radio-icon">✓</span>
-                                <span>بله، ساکن این کشور هستم</span>
-                            </div>
-                        </label>
-                        <label class="radio-card">
-                            <input type="radio" name="resident" value="no">
-                            <div class="radio-content">
-                                <span class="radio-icon">✗</span>
-                                <span>خیر، ساکن این کشور نیستم</span>
-                            </div>
-                        </label>
-                    </div>
-                </section>
-
-                <section class="panel" data-panel="4">
-                    <div class="panel-header">
-                        <h3>انتخاب موضوعات</h3>
-                        <p>موضوعات انتخابی راهنمای تولید ایمیل هوش مصنوعی خواهند بود</p>
-                    </div>
-                    <div id="topicsList" class="topics-grid"></div>
-                </section>
-
-                <section class="panel" data-panel="5">
-                    <div class="panel-header">
-                        <h3>پیش‌نویس ایمیل</h3>
-                        <p>ایمیل تولید شده توسط هوش مصنوعی</p>
-                    </div>
-                    <div class="email-preview">
+                <!-- Step Panels -->
+                <div class="step-panels">
+                    <!-- Step 1: Country Selection -->
+                    <div class="step-panel active" data-step="1">
+                        <h2>کشور مقصد را انتخاب کنید</h2>
+                        <p>کشوری که می‌خواهید به سیاستمداران آن ایمیل بفرستید</p>
                         <div class="form-group">
-                            <label>موضوع ایمیل</label>
-                            <input type="text" id="emailSubject" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>متن ایمیل</label>
-                            <textarea id="emailBody" rows="12" readonly></textarea>
+                            <select id="countrySelect" class="form-select">
+                                <option value="">در حال بارگذاری...</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="cta-row">
-                        <button id="generateEmail" class="primary generate-btn">
-                            <span class="btn-icon">🤖</span>
-                            <span>تولید ایمیل با هوش مصنوعی</span>
-                        </button>
-                        <button id="openGmail" class="secondary" disabled>
-                            <span class="btn-icon">📧</span>
-                            <span>باز کردن در کلاینت ایمیل</span>
+
+                    <!-- Step 2: Recipients Selection -->
+                    <div class="step-panel" data-step="2">
+                        <h2>گیرندگان را انتخاب کنید</h2>
+                        <p>یک یا چند نفر از مقامات سیاسی را انتخاب کنید</p>
+                        <div class="checkbox-list" id="recipientsList">
+                            <div class="loading">در حال بارگذاری...</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Residency Status -->
+                    <div class="step-panel" data-step="3">
+                        <h2>وضعیت اقامت شما</h2>
+                        <p>آیا در کشور انتخاب شده اقامت دارید؟</p>
+                        <div class="radio-group">
+                            <label class="radio-card">
+                                <input type="radio" name="resident" value="yes">
+                                <div class="radio-content">
+                                    <span class="radio-icon">🏠</span>
+                                    <span class="radio-label">بله، ساکن این کشور هستم</span>
+                                </div>
+                            </label>
+                            <label class="radio-card">
+                                <input type="radio" name="resident" value="no">
+                                <div class="radio-content">
+                                    <span class="radio-icon">🌍</span>
+                                    <span class="radio-label">خیر، در کشور دیگری هستم</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Topics Selection -->
+                    <div class="step-panel" data-step="4">
+                        <h2>موضوعات را انتخاب کنید</h2>
+                        <p>موضوعاتی که می‌خواهید در ایمیل به آنها اشاره شود</p>
+                        <div class="checkbox-list" id="topicsList">
+                            <div class="loading">در حال بارگذاری...</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Email Preview -->
+                    <div class="step-panel" data-step="5">
+                        <h2>پیش‌نویس ایمیل شما</h2>
+                        <p>ایمیل آماده ارسال است — می‌توانید ویرایش کنید</p>
+                        <div class="email-preview">
+                            <div class="form-group">
+                                <label>موضوع ایمیل</label>
+                                <input type="text" id="emailSubject" class="form-input" placeholder="موضوع ایمیل...">
+                            </div>
+                            <div class="form-group">
+                                <label>متن ایمیل</label>
+                                <textarea id="emailBody" class="form-textarea" rows="10" placeholder="متن ایمیل..."></textarea>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-large" id="sendEmailBtn">
+                            <span class="btn-icon">✉️</span>
+                            ارسال با ایمیل پیش‌فرض
                         </button>
                     </div>
-                </section>
-            </div>
+                </div>
 
-            <div class="stepper-actions">
-                <button id="prevBtn" class="ghost">
-                    <span>←</span>
-                    <span>قبلی</span>
-                </button>
-                <button id="nextBtn" class="primary">
-                    <span>بعدی</span>
-                    <span>→</span>
-                </button>
-            </div>
-        </section>
+                <!-- Navigation Buttons -->
+                <div class="step-nav">
+                    <button class="btn btn-secondary" id="prevBtn" disabled>
+                        <span class="btn-icon">→</span>
+                        قبلی
+                    </button>
+                    <button class="btn btn-primary" id="nextBtn">
+                        بعدی
+                        <span class="btn-icon">←</span>
+                    </button>
+                </div>
+            </section>
 
-        <section class="campaign-panel" id="campaignPanel" aria-hidden="true">
-            <div class="campaign-header">
-                <h3>کمپین‌های فعال</h3>
-                <p>کمپین‌های آماده و تنظیم شده</p>
-            </div>
-            <div class="coming-soon">
-                <div class="coming-soon-icon">🚀</div>
-                <h4>به زودی در دسترس</h4>
-                <p>فعلاً از مسیر انتخاب کشور استفاده کنید</p>
-            </div>
-        </section>
-
-        <section class="revolution-info">
-            <div class="revolution-header">
-                <h3>چرا این کمپین اهمیت دارد؟</h3>
-                <div class="revolution-badge">انقلاب ۲۰۲۶</div>
-            </div>
-            <p class="revolution-description">
-                ایران در لحظه‌ای تعیین‌کننده در انقلاب ۲۰۲۶ قرار دارد. این پلتفرم به شهروندان جهان کمک می‌کند
-                تا پیام‌های دقیق و محترمانه به رهبران ارسال کنند، فشار دیپلماتیک و آگاهی عمومی را افزایش دهند.
-            </p>
-            <div class="info-grid">
+            <!-- Info Cards -->
+            <section class="info-section">
                 <div class="info-card">
-                    <div class="info-icon">🎯</div>
-                    <h4>هدف</h4>
-                    <p>فشار بین‌المللی و همبستگی با مردم ایران</p>
+                    <span class="info-icon">📧</span>
+                    <h3>ایمیل هوشمند</h3>
+                    <p>ایمیل‌های شخصی‌سازی شده با هوش مصنوعی</p>
                 </div>
                 <div class="info-card">
-                    <div class="info-icon">⚡</div>
-                    <h4>روش</h4>
-                    <p>ایمیل‌های کوتاه، آگاهانه و شخصی‌سازی شده با هوش مصنوعی</p>
+                    <span class="info-icon">🌍</span>
+                    <h3>دسترسی جهانی</h3>
+                    <p>ارسال به سیاستمداران سراسر جهان</p>
                 </div>
                 <div class="info-card">
-                    <div class="info-icon">🔒</div>
-                    <h4>امنیت</h4>
-                    <p>هیچ اطلاعات حساس کاربر ذخیره نمی‌شود</p>
+                    <span class="info-icon">⚡</span>
+                    <h3>سریع و آسان</h3>
+                    <p>فقط در ۵ مرحله ساده</p>
                 </div>
-            </div>
-        </section>
+            </section>
+        </main>
 
-        <footer class="main-footer">
-            <div class="footer-content">
-                <p>ساخته شده با ❤️ برای آزادی ایران</p>
-                <div class="footer-links">
-                    <a href="/admin.html">ورود مدیران</a>
-                    <span>•</span>
-                    <span>انقلاب ۲۰۲۶</span>
-                </div>
-            </div>
+        <!-- Footer -->
+        <footer class="footer">
+            <p>© ۲۰۲۶ عمل برای ایران — همه حقوق محفوظ است</p>
         </footer>
-    </main>
+    </div>
 
-    <script src="/js/app.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
