@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/v1", tags=["public"])
 
 @router.get("/countries", response_model=CountriesResponse)
 async def list_countries(db: Session = Depends(get_db)):
-    \"\"\"Get list of top influential countries with flags\"\"\"
+    """Get list of top influential countries with flags"""
     # Get only countries from TOP_COUNTRIES list
     top_codes = [c["code"] for c in TOP_COUNTRIES]
     countries = db.query(Country).filter(
@@ -105,7 +105,7 @@ async def list_topics(db: Session = Depends(get_db)):
 
 @router.get("/campaigns")
 async def list_campaigns(db: Session = Depends(get_db)):
-    \"\"\"Get list of hot campaigns (predefined by admins)\"\"\"
+    """Get list of hot campaigns (predefined by admins)"""
     campaigns = db.query(Campaign).filter(
         Campaign.is_active.is_(True),
         Campaign.is_hot.is_(True)

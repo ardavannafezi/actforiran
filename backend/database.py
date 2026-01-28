@@ -52,7 +52,8 @@ def seed_defaults(db):
     super_admin = Administrator(
         email="admin@actforiran.org",
         password_hash=get_password_hash("admin123"),
-        role="super_admin"
+        role="super_admin",
+        is_active=True
     )
     db.add(super_admin)
     db.commit()
@@ -84,7 +85,7 @@ def seed_defaults(db):
     sos_role = db.query(RecipientRole).filter_by(name="Secretary of State").first()
     chancellor_role = db.query(RecipientRole).filter_by(name="Chancellor").first()
     
-    # Create sample recipients
+    # Create sample recipients (all approved by super admin)
     recipients_data = [
         # United States
         {"full_name": "Joe Biden", "email_address": "president@whitehouse.gov", "role_id": president_role.id, "country_code": "USA"},
@@ -114,6 +115,7 @@ def seed_defaults(db):
     for recipient_data in recipients_data:
         recipient = PoliticalRecipient(
             **recipient_data,
+            is_active=True,
             approval_status="approved",
             created_by_admin_id=super_admin.id,
             approved_by_admin_id=super_admin.id
@@ -167,6 +169,7 @@ def seed_defaults(db):
     for topic_data in topics_data:
         topic = AdvocacyTopic(
             **topic_data,
+            is_active=True,
             approval_status="approved",
             created_by_admin_id=super_admin.id,
             approved_by_admin_id=super_admin.id
@@ -177,7 +180,7 @@ def seed_defaults(db):
     
     print("✅ Database seeded successfully!")
     print(f"   Super Admin: admin@actforiran.org / admin123")
-    print(f"   Countries: {len(COUNTRIES)} created")
+    print(f"   Countries: {len(TOP_COUNTRIES)} created")
     print(f"   Recipients: {len(recipients_data)} created") 
     print(f"   Topics: {len(topics_data)} created")
 
