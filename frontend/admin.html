@@ -1,94 +1,164 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login | ActForIran</title>
+    <title>ورود مدیران | عمل برای ایران</title>
     <meta name="robots" content="noindex,nofollow">
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body class="admin-body">
     <div class="bg-ornament"></div>
     <div class="bg-grid"></div>
+    <div class="noise-overlay"></div>
 
     <main class="admin-shell">
         <section class="admin-login" id="loginView">
-            <header>
-                <span class="admin-eyebrow">Admin Access</span>
-                <h1>Secure Login</h1>
-                <p>Restricted area for approved administrators.</p>
-            </header>
+            <div class="login-header">
+                <div class="admin-logo">
+                    <span class="logo-mark">عای</span>
+                    <div>
+                        <strong>عمل برای ایران</strong>
+                        <small>پنل مدیریت</small>
+                    </div>
+                </div>
+                <span class="admin-eyebrow">دسترسی مدیران</span>
+                <h1>ورود امن</h1>
+                <p>منطقه محدود برای مدیران تأیید شده</p>
+            </div>
             <form id="loginForm" class="admin-form">
-                <label>
-                    Email
-                    <input type="email" id="adminEmail" required autocomplete="username">
-                </label>
-                <label>
-                    Password
-                    <input type="password" id="adminPassword" required autocomplete="current-password">
-                </label>
-                <button type="submit" class="primary">Sign in</button>
+                <div class="form-group">
+                    <label>ایمیل</label>
+                    <input type="email" id="adminEmail" required autocomplete="username" placeholder="ایمیل خود را وارد کنید">
+                </div>
+                <div class="form-group">
+                    <label>رمز عبور</label>
+                    <input type="password" id="adminPassword" required autocomplete="current-password" placeholder="رمز عبور خود را وارد کنید">
+                </div>
+                <button type="submit" class="primary login-btn">
+                    <span>ورود</span>
+                    <span class="btn-arrow">←</span>
+                </button>
                 <p class="form-hint" id="loginError"></p>
             </form>
         </section>
 
         <section class="admin-dashboard" id="dashboardView" aria-hidden="true">
             <header class="dashboard-header">
-                <div>
-                    <h2>Admin Dashboard</h2>
-                    <p id="adminMeta">Loading...</p>
+                <div class="dashboard-title">
+                    <h2>پنل مدیریت</h2>
+                    <p id="adminMeta">در حال بارگذاری...</p>
                 </div>
-                <button id="logoutBtn" class="ghost">Log out</button>
+                <button id="logoutBtn" class="ghost logout-btn">
+                    <span>خروج</span>
+                    <span>💪</span>
+                </button>
             </header>
 
             <nav class="dashboard-nav">
-                <button class="nav-pill active" data-view="overview">Overview</button>
-                <button class="nav-pill" data-view="recipients">Recipients</button>
-                <button class="nav-pill" data-view="topics">Topics</button>
+                <button class="nav-pill active" data-view="overview">
+                    <span class="nav-icon">📊</span>
+                    <span>خلاصه</span>
+                </button>
+                <button class="nav-pill" data-view="recipients">
+                    <span class="nav-icon">📛</span>
+                    <span>گیرندگان</span>
+                </button>
+                <button class="nav-pill" data-view="topics">
+                    <span class="nav-icon">📝</span>
+                    <span>موضوعات</span>
+                </button>
             </nav>
 
             <section class="dashboard-view active" id="view-overview">
                 <div class="dashboard-grid">
                     <div class="stat-card">
-                        <h3>Your role</h3>
-                        <p id="adminRole">-</p>
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-content">
+                            <h3>نقش شما</h3>
+                            <p id="adminRole" class="stat-value">-</p>
+                        </div>
                     </div>
                     <div class="stat-card">
-                        <h3>Status</h3>
-                        <p>Connected</p>
+                        <div class="stat-icon status-connected">✓</div>
+                        <div class="stat-content">
+                            <h3>وضعیت</h3>
+                            <p class="stat-value">متصل</p>
+                        </div>
                     </div>
                     <div class="stat-card">
-                        <h3>Next sprint</h3>
-                        <p>Analytics & logs in Sprint 4</p>
+                        <div class="stat-icon">🚀</div>
+                        <div class="stat-content">
+                            <h3>به‌روزرسانی بعدی</h3>
+                            <p class="stat-value">آمار و گزارشات</p>
+                        </div>
                     </div>
+                </div>
+                <div class="revolution-status">
+                    <div class="revolution-badge-large">انقلاب ۲۰۲۶</div>
+                    <h3>وضعیت کنونی کمپین</h3>
+                    <p>سیستم آماده و فعال برای دریافت و پردازش درخواست‌های تولید ایمیل</p>
                 </div>
             </section>
 
             <section class="dashboard-view" id="view-recipients">
                 <div class="section-header">
-                    <h3>Recipients</h3>
-                    <p>Create and manage political recipients. Admin submissions require approval.</p>
+                    <div class="section-title">
+                        <h3>مدیریت گیرندگان</h3>
+                        <p>ایجاد و مدیریت گیرندگان سیاسی. درخواست‌های مدیران نیاز به تأیید دارند.</p>
+                    </div>
+                    <div class="section-icon">📛</div>
                 </div>
                 <form class="inline-form" id="recipientForm">
                     <input type="hidden" id="recipientId">
-                    <input type="text" id="recipientName" placeholder="Full name" required>
-                    <input type="email" id="recipientEmail" placeholder="Email" required>
-                    <select id="recipientRole" required></select>
-                    <input type="text" id="recipientTitle" placeholder="Custom title (optional)">
-                    <select id="recipientCountry" required></select>
-                    <button type="submit" class="primary" id="recipientSubmit">Save recipient</button>
-                    <button type="button" class="ghost" id="recipientReset">Clear</button>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>نام کامل</label>
+                            <input type="text" id="recipientName" placeholder="نام کامل فرد" required>
+                        </div>
+                        <div class="form-group">
+                            <label>ایمیل</label>
+                            <input type="email" id="recipientEmail" placeholder="ایمیل رسمی" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>نقش</label>
+                            <select id="recipientRole" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>عنوان سفارشی (اختیاری)</label>
+                            <input type="text" id="recipientTitle" placeholder="عنوان سفارشی">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>کشور</label>
+                            <select id="recipientCountry" required></select>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="primary" id="recipientSubmit">
+                                <span>ذخیرع گیرنده</span>
+                            </button>
+                            <button type="button" class="ghost" id="recipientReset">
+                                <span>پاک کردن</span>
+                            </button>
+                        </div>
+                    </div>
                 </form>
                 <div class="table-wrap">
                     <table class="admin-table" id="recipientsTable">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Country</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th>نام</th>
+                                <th>ایمیل</th>
+                                <th>نقش</th>
+                                <th>کشور</th>
+                                <th>وضعیت</th>
+                                <th>عملیات</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -98,25 +168,47 @@
 
             <section class="dashboard-view" id="view-topics">
                 <div class="section-header">
-                    <h3>Topics</h3>
-                    <p>Topics are shown to users and power AI email generation.</p>
+                    <div class="section-title">
+                        <h3>مدیریت موضوعات</h3>
+                        <p>موضوعات به کاربران نشان داده می‌شوند و قابلیت تولید ایمیل با هوش مصنوعی را تأمین می‌کنند.</p>
+                    </div>
+                    <div class="section-icon">📝</div>
                 </div>
                 <form class="inline-form" id="topicForm">
                     <input type="hidden" id="topicId">
-                    <input type="text" id="topicSlug" placeholder="Slug (e.g. digital-blackout)" required>
-                    <input type="text" id="topicTitle" placeholder="Display title" required>
-                    <input type="text" id="topicDescription" placeholder="Short description">
-                    <button type="submit" class="primary" id="topicSubmit">Save topic</button>
-                    <button type="button" class="ghost" id="topicReset">Clear</button>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>شناسه (به انگلیسی)</label>
+                            <input type="text" id="topicSlug" placeholder="مثال: digital-blackout" required>
+                        </div>
+                        <div class="form-group">
+                            <label>عنواع نمایشی</label>
+                            <input type="text" id="topicTitle" placeholder="عنوان فارسی موضوع" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>توضیح کوتاه</label>
+                            <input type="text" id="topicDescription" placeholder="توضیح مختصر موضوع">
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="primary" id="topicSubmit">
+                                <span>ذخیره موضوع</span>
+                            </button>
+                            <button type="button" class="ghost" id="topicReset">
+                                <span>پاک کردن</span>
+                            </button>
+                        </div>
+                    </div>
                 </form>
                 <div class="table-wrap">
                     <table class="admin-table" id="topicsTable">
                         <thead>
                             <tr>
-                                <th>Title</th>
-                                <th>Slug</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th>عنوان</th>
+                                <th>شناسه</th>
+                                <th>وضعیت</th>
+                                <th>عملیات</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
