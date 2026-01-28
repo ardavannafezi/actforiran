@@ -1,23 +1,25 @@
 """
 All European Countries + Major Global Powers
-Includes all 44 European countries plus influential countries worldwide
+Includes all 44 European countries plus influential countries worldwide with Persian names
 """
+
+from .persian_countries import get_persian_name
 
 TOP_COUNTRIES = [
     # G7 Countries (Non-European)
-    {"code": "USA", "name": "United States", "flag": "🇺🇸"},
-    {"code": "JPN", "name": "Japan", "flag": "🇯🇵"},
-    {"code": "CAN", "name": "Canada", "flag": "🇨🇦"},
+    {"code": "USA", "name": "United States", "name_persian": "ایالات متحده", "flag": "🇺🇸"},
+    {"code": "JPN", "name": "Japan", "name_persian": "ژاپن", "flag": "🇯🇵"},
+    {"code": "CAN", "name": "Canada", "name_persian": "کانادا", "flag": "🇨🇦"},
     
     # All European Countries (44 countries)
     # Western Europe
-    {"code": "GBR", "name": "United Kingdom", "flag": "🇬🇧"},
-    {"code": "DEU", "name": "Germany", "flag": "🇩🇪"},
-    {"code": "FRA", "name": "France", "flag": "🇫🇷"},
-    {"code": "ITA", "name": "Italy", "flag": "🇮🇹"},
-    {"code": "ESP", "name": "Spain", "flag": "🇪🇸"},
-    {"code": "NLD", "name": "Netherlands", "flag": "🇳🇱"},
-    {"code": "CHE", "name": "Switzerland", "flag": "🇨🇭"},
+    {"code": "GBR", "name": "United Kingdom", "name_persian": "انگلستان", "flag": "🇬🇧"},
+    {"code": "DEU", "name": "Germany", "name_persian": "آلمان", "flag": "🇩🇪"},
+    {"code": "FRA", "name": "France", "name_persian": "فرانسه", "flag": "🇫🇷"},
+    {"code": "ITA", "name": "Italy", "name_persian": "ایتالیا", "flag": "🇮🇹"},
+    {"code": "ESP", "name": "Spain", "name_persian": "اسپانیا", "flag": "🇪🇸"},
+    {"code": "NLD", "name": "Netherlands", "name_persian": "هلند", "flag": "🇳🇱"},
+    {"code": "CHE", "name": "Switzerland", "name_persian": "سوئیس", "flag": "🇨🇭"},
     {"code": "BEL", "name": "Belgium", "flag": "🇧🇪"},
     {"code": "AUT", "name": "Austria", "flag": "🇦🇹"},
     {"code": "IRL", "name": "Ireland", "flag": "🇮🇪"},

@@ -71,6 +71,7 @@ async def list_countries(db: Session = Depends(get_db)):
             {
                 "code": c.code,
                 "name": c.name,
+                "name_persian": c.name_persian or c.name,
                 "flag": get_country_flag(c.code)
             } for c in countries
         ]
@@ -143,7 +144,8 @@ async def list_campaigns(db: Session = Depends(get_db)):
     """Get list of hot campaigns (predefined by admins)"""
     campaigns = db.query(Campaign).filter(
         Campaign.is_active.is_(True),
-        Campaign.is_hot.is_(True)
+        Campaign.is_hot.is_(True),
+        Campaign.approval_status == "approved"
     ).order_by(Campaign.display_order, Campaign.created_at.desc()).all()
     
     result = []
@@ -158,6 +160,7 @@ async def list_campaigns(db: Session = Depends(get_db)):
             "country": {
                 "code": campaign.country_code,
                 "name": country.name if country else "",
+                "name_persian": country.name_persian if country else "",
                 "flag": get_country_flag(campaign.country_code)
             },
             "recipient_ids": campaign.recipient_ids,

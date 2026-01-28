@@ -255,7 +255,7 @@ async function loadCountries() {
         state.countries = data.countries || [];
         
         elements.countrySelect.innerHTML = '<option value="">یک کشور انتخاب کنید...</option>' +
-            state.countries.map(c => `<option value="${c.code}">${c.flag || ''} ${c.name}</option>`).join('');
+            state.countries.map(c => `<option value="${c.code}">${c.flag || ''} ${c.name_persian || c.name}</option>`).join('');
         
     } catch (error) {
         console.error('Error loading countries:', error);
@@ -353,7 +353,7 @@ function renderCampaigns() {
                     <div class="campaign-title">${campaign.title}</div>
                     <div class="campaign-country">
                         <span>${campaign.country.flag}</span>
-                        <span>${campaign.country.name}</span>
+                        <span>${campaign.country.name_persian || campaign.country.name}</span>
                     </div>
                 </div>
             </div>

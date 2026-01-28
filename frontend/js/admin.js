@@ -158,7 +158,7 @@ async function loadCountries() {
         // Populate country select in modal
         const select = document.getElementById('recipientCountry');
         select.innerHTML = '<option value="">انتخاب کنید...</option>' +
-            countries.map(c => `<option value="${c.code}">${c.name}</option>`).join('');
+            countries.map(c => `<option value="${c.code}">${c.flag || ''} ${c.name_persian || c.name}</option>`).join('');
         
         // Render countries table
         const tbody = document.getElementById('countriesTableBody');
@@ -166,7 +166,13 @@ async function loadCountries() {
             <tr>
                 <td>${c.code}</td>
                 <td>${c.name}</td>
-                <td><span class="badge badge-success">فعال</span></td>
+                <td>${c.name_persian || '-'}</td>
+                <td>${c.flag || '-'}</td>
+                <td><span class="badge ${c.is_active ? 'badge-success' : 'badge-error'}">${c.is_active ? 'فعال' : 'غیرفعال'}</span></td>
+                <td>
+                    <button class="btn-icon" onclick="editCountry('${c.code}', '${c.name}', '${c.name_persian || ''}', '${c.flag || ''}', ${c.is_active})" title="ویرایش">✏️</button>
+                    <button class="btn-icon" onclick="deleteCountry('${c.code}')" title="حذف">🗑️</button>
+                </td>
             </tr>
         `).join('');
         
@@ -449,6 +455,15 @@ document.querySelectorAll('.admin-tab').forEach(tab => {
             content.classList.remove('active');
         });
         document.getElementById(`${tabName}Tab`).classList.add('active');
+        
+        // Load data for the tab
+        if (tabName === 'admins') {
+            loadAdmins();
+        } else if (tabName === 'pending') {
+            loadPendingCampaigns();
+        } else if (tabName === 'analytics') {
+            loadAnalytics();
+        }
     });
 });
 
@@ -831,4 +846,410 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // ==================== ADMIN MANAGEMENT ====================
+    
+    window.loadAdmins = async function() {
+        const token = sessionStorage.getItem('adminToken');
+        const tbody = document.getElementById('adminsTableBody');
+        
+        try {
+            const response = await fetch(`${API_BASE}/admin/admins`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load admins');
+            
+            const data = await response.json();
+            const admins = data.admins || [];
+            
+            tbody.innerHTML = admins.length ? admins.map(admin => `
+                <tr>
+                    <td>${admin.email}</td>
+                    <td><span class="badge ${admin.role === 'super_admin' ? 'badge-hot' : ''}">${admin.role}</span></td>
+                    <td><span class="badge ${admin.is_active ? 'badge-success' : 'badge-error'}">${admin.is_active ? 'فعال' : 'غیرفعال'}</span></td>
+                    <td>${admin.created_at ? new Date(admin.created_at).toLocaleDateString('fa-IR') : '-'}</td>
+                    <td>${admin.last_login ? new Date(admin.last_login).toLocaleDateString('fa-IR') : '-'}</td>
+                    <td>
+                        <button class="btn-icon" onclick="editAdmin(${admin.id})" title="ویرایش">✏️</button>
+                        <button class="btn-icon" onclick="deleteAdmin(${admin.id})" title="حذف">🗑️</button>
+                    </td>
+                </tr>
+            `).join('') : '<tr><td colspan="6" class="no-data">مدیری یافت نشد</td></tr>';
+        } catch (error) {
+            console.error('Failed to load admins:', error);
+            tbody.innerHTML = '<tr><td colspan="6" class="error">خطا در بارگذاری</td></tr>';
+        }
+    };
+
+    document.getElementById('addAdminBtn')?.addEventListener('click', () => {
+        document.getElementById('adminModalTitle').textContent = 'افزودن مدیر';
+        document.getElementById('adminForm').reset();
+        document.getElementById('adminId').value = '';
+        document.getElementById('adminPassword').required = true;
+        openModal('adminModal');
+    });
+
+    document.getElementById('adminForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const id = document.getElementById('adminId').value;
+        const payload = {
+            email: document.getElementById('adminEmail').value,
+            role: document.getElementById('adminRole').value,
+            is_active: document.getElementById('adminIsActive').checked
+        };
+        
+        const password = document.getElementById('adminPassword').value;
+        if (password) payload.password = password;
+        
+        const token = sessionStorage.getItem('adminToken');
+        const url = id ? `${API_BASE}/admin/admins/${id}` : `${API_BASE}/admin/admins`;
+        const method = id ? 'PUT' : 'POST';
+        
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to save admin');
+            }
+            
+            closeModal('adminModal');
+            loadAdmins();
+            showToast(id ? 'مدیر ویرایش شد' : 'مدیر جدید اضافه شد', 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    });
+
+    window.editAdmin = async function(id) {
+        const token = sessionStorage.getItem('adminToken');
+        
+        try {
+            const response = await fetch(`${API_BASE}/admin/admins`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load admin');
+            
+            const data = await response.json();
+            const admin = data.admins.find(a => a.id === id);
+            
+            if (!admin) throw new Error('Admin not found');
+            
+            document.getElementById('adminModalTitle').textContent = 'ویرایش مدیر';
+            document.getElementById('adminId').value = admin.id;
+            document.getElementById('adminEmail').value = admin.email;
+            document.getElementById('adminRole').value = admin.role;
+            document.getElementById('adminIsActive').checked = admin.is_active;
+            document.getElementById('adminPassword').value = '';
+            document.getElementById('adminPassword').required = false;
+            
+            openModal('adminModal');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    window.deleteAdmin = async function(id) {
+        if (!confirm('آیا از حذف این مدیر اطمینان دارید؟')) return;
+        
+        const token = sessionStorage.getItem('adminToken');
+        
+        try {
+            const response = await fetch(`${API_BASE}/admin/admins/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to delete admin');
+            }
+            
+            loadAdmins();
+            showToast('مدیر حذف شد', 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    // ==================== COUNTRY MANAGEMENT ====================
+    
+    document.getElementById('addCountryBtn')?.addEventListener('click', () => {
+        document.getElementById('countryModalTitle').textContent = 'افزودن کشور';
+        document.getElementById('countryForm').reset();
+        document.getElementById('countryOriginalCode').value = '';
+        document.getElementById('countryIsActive').checked = true;
+        openModal('countryModal');
+    });
+
+    document.getElementById('countryForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const originalCode = document.getElementById('countryOriginalCode').value;
+        const code = document.getElementById('countryCode').value.toUpperCase();
+        const payload = {
+            code: code,
+            name: document.getElementById('countryName').value,
+            name_persian: document.getElementById('countryNamePersian').value,
+            flag: document.getElementById('countryFlag').value,
+            is_active: document.getElementById('countryIsActive').checked
+        };
+        
+        const token = sessionStorage.getItem('adminToken');
+        const url = originalCode ? `${API_BASE}/admin/countries/${originalCode}` : `${API_BASE}/admin/countries`;
+        const method = originalCode ? 'PUT' : 'POST';
+        
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to save country');
+            }
+            
+            closeModal('countryModal');
+            loadCountries();
+            showToast(originalCode ? 'کشور ویرایش شد' : 'کشور جدید اضافه شد', 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    });
+
+    window.editCountry = function(code, name, namePersian, flag, isActive) {
+        document.getElementById('countryModalTitle').textContent = 'ویرایش کشور';
+        document.getElementById('countryOriginalCode').value = code;
+        document.getElementById('countryCode').value = code;
+        document.getElementById('countryName').value = name;
+        document.getElementById('countryNamePersian').value = namePersian;
+        document.getElementById('countryFlag').value = flag;
+        document.getElementById('countryIsActive').checked = isActive;
+        openModal('countryModal');
+    };
+
+    window.deleteCountry = async function(code) {
+        if (!confirm(`آیا از حذف کشور ${code} اطمینان دارید؟`)) return;
+        
+        const token = sessionStorage.getItem('adminToken');
+        
+        try {
+            const response = await fetch(`${API_BASE}/admin/countries/${code}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to delete country');
+            }
+            
+            loadCountries();
+            showToast('کشور حذف شد', 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    // ==================== PENDING CAMPAIGNS ====================
+    
+    window.loadPendingCampaigns = async function() {
+        const token = sessionStorage.getItem('adminToken');
+        const container = document.getElementById('pendingCampaignsList');
+        
+        try {
+            const response = await fetch(`${API_BASE}/admin/campaigns/pending`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load pending campaigns');
+            
+            const data = await response.json();
+            const campaigns = data.pending_campaigns || [];
+            
+            if (campaigns.length === 0) {
+                container.innerHTML = '<div class="no-data">کمپینی در انتظار تایید نیست</div>';
+                return;
+            }
+            
+            container.innerHTML = campaigns.map(campaign => `
+                <div class="campaign-admin-card">
+                    <div class="campaign-admin-header">
+                        <span class="campaign-icon">${campaign.icon || '📧'}</span>
+                        <h3>${campaign.title}</h3>
+                    </div>
+                    <p class="campaign-admin-description">${campaign.description || ''}</p>
+                    <div class="campaign-admin-meta">
+                        <span>🌍 ${campaign.country.flag} ${campaign.country.name}</span>
+                        <span>👥 ${campaign.recipient_count} گیرنده</span>
+                        <span>📋 ${campaign.topic_count} موضوع</span>
+                    </div>
+                    <div class="campaign-admin-actions" style="margin-top: 16px;">
+                        <button class="btn btn-success" onclick="approveCampaign(${campaign.id})" style="flex: 1;">✅ تایید</button>
+                        <button class="btn btn-danger" onclick="rejectCampaign(${campaign.id})" style="flex: 1;">❌ رد</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Failed to load pending campaigns:', error);
+            container.innerHTML = '<div class="error">خطا در بارگذاری</div>';
+        }
+    };
+
+    window.approveCampaign = async function(id) {
+        const token = sessionStorage.getItem('adminToken');
+        
+        try {
+            const response = await fetch(`${API_BASE}/admin/campaigns/${id}/approve`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Failed to approve campaign');
+            
+            loadPendingCampaigns();
+            loadCampaigns();
+            showToast('کمپین تایید شد', 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    window.rejectCampaign = async function(id) {
+        const reason = prompt('دلیل رد کمپین (اختیاری):');
+        
+        const token = sessionStorage.getItem('adminToken');
+        
+        try {
+            const response = await fetch(`${API_BASE}/admin/campaigns/${id}/reject`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ reason: reason || '' })
+            });
+            
+            if (!response.ok) throw new Error('Failed to reject campaign');
+            
+            loadPendingCampaigns();
+            showToast('کمپین رد شد', 'error');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    };
+
+    // ==================== CHARTS ====================
+    
+    let campaignChart, countryChart;
+    
+    window.renderCharts = function(analytics) {
+        // Campaign Distribution Chart
+        const campaignCtx = document.getElementById('campaignChart');
+        if (campaignCtx && analytics.campaign_analytics) {
+            if (campaignChart) campaignChart.destroy();
+            
+            const campaigns = analytics.campaign_analytics.slice(0, 10);
+            campaignChart = new Chart(campaignCtx, {
+                type: 'bar',
+                data: {
+                    labels: campaigns.map(c => c.campaign_title),
+                    datasets: [{
+                        label: 'تعداد ایمیل',
+                        data: campaigns.map(c => c.email_count),
+                        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                        borderColor: 'rgb(99, 102, 241)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+        
+        // Country Distribution Chart
+        const countryCtx = document.getElementById('countryChart');
+        if (countryCtx && analytics.top_countries) {
+            if (countryChart) countryChart.destroy();
+            
+            const countries = analytics.top_countries.slice(0, 10);
+            countryChart = new Chart(countryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: countries.map(c => c.country),
+                    datasets: [{
+                        data: countries.map(c => c.count),
+                        backgroundColor: [
+                            'rgba(99, 102, 241, 0.8)',
+                            'rgba(236, 72, 153, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(251, 191, 36, 0.8)',
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(168, 85, 247, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(14, 165, 233, 0.8)',
+                            'rgba(251, 146, 60, 0.8)',
+                            'rgba(132, 204, 22, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    };
+
+    // Update loadAnalytics to render charts
+    const originalLoadAnalytics = window.loadAnalytics;
+    window.loadAnalytics = async function() {
+        await originalLoadAnalytics();
+        
+        const token = sessionStorage.getItem('adminToken');
+        try {
+            const response = await fetch(`${API_BASE}/admin/analytics`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                const analytics = await response.json();
+                renderCharts(analytics);
+            }
+        } catch (error) {
+            console.error('Failed to load analytics for charts:', error);
+        }
+    };
 });

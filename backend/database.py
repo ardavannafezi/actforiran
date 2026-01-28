@@ -52,17 +52,18 @@ def seed_defaults(db):
     super_admin = Administrator(
         email="admin@actforiran.org",
         password_hash=get_password_hash("admin123"),
-        role="super_admin"
+        role="super_admin",
+        is_active=True
     )
     db.add(super_admin)
     db.commit()
     db.refresh(super_admin)
 
-    # Seed countries (top 60 influential countries)
+    # Seed countries (with Persian names and flags)
     if db.query(Country).count() == 0:
         db.bulk_insert_mappings(
             Country,
-            [{"code": c["code"], "name": c["name"], "is_active": True} for c in TOP_COUNTRIES],
+            [{"code": c["code"], "name": c["name"], "name_persian": c.get("name_persian", c["name"]), "flag": c["flag"], "is_active": True} for c in TOP_COUNTRIES],
         )
 
     # Seed roles
@@ -273,7 +274,9 @@ def seed_defaults(db):
             if campaign_data["recipient_ids"] and campaign_data["topic_ids"]:  # Only create if we have valid data
                 campaign = Campaign(
                     **campaign_data,
-                    created_by_admin_id=super_admin.id
+                    created_by_admin_id=super_admin.id,
+                    approval_status="approved",
+                    approved_by_admin_id=super_admin.id
                 )
                 db.add(campaign)
         
@@ -294,31 +297,97 @@ def run_migrations(db: Session):
     
     migrations = []
     
-    # Check if campaign_id column exists in email_generation_logs
+    # Check administrators table
     try:
         result = db.execute(text("""
-            SELECT column_name 
-            FROM information_schema.columns 
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='administrators' AND column_name='is_active'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE administrators ADD COLUMN is_active BOOLEAN DEFAULT TRUE")
+            print("   ➕ Need to add is_active to administrators")
+    except Exception as e:
+        print(f"   ⚠️  Could not check administrators.is_active: {e}")
+    
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='administrators' AND column_name='created_by_admin_id'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE administrators ADD COLUMN created_by_admin_id INTEGER REFERENCES administrators(id)")
+            print("   ➕ Need to add created_by_admin_id to administrators")
+    except Exception as e:
+        print(f"   ⚠️  Could not check administrators.created_by_admin_id: {e}")
+    
+    # Check countries table
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='countries' AND column_name='name_persian'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE countries ADD COLUMN name_persian VARCHAR(100)")
+            print("   ➕ Need to add name_persian to countries")
+    except Exception as e:
+        print(f"   ⚠️  Could not check countries.name_persian: {e}")
+    
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='countries' AND column_name='flag'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE countries ADD COLUMN flag VARCHAR(10)")
+            print("   ➕ Need to add flag to countries")
+    except Exception as e:
+        print(f"   ⚠️  Could not check countries.flag: {e}")
+    
+    # Check campaigns table
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='campaigns' AND column_name='approval_status'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE campaigns ADD COLUMN approval_status VARCHAR(20) DEFAULT 'pending'")
+            print("   ➕ Need to add approval_status to campaigns")
+    except Exception as e:
+        print(f"   ⚠️  Could not check campaigns.approval_status: {e}")
+    
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='campaigns' AND column_name='approved_by_admin_id'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE campaigns ADD COLUMN approved_by_admin_id INTEGER REFERENCES administrators(id)")
+            print("   ➕ Need to add approved_by_admin_id to campaigns")
+    except Exception as e:
+        print(f"   ⚠️  Could not check campaigns.approved_by_admin_id: {e}")
+    
+    # Check email_generation_logs table
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
             WHERE table_name='email_generation_logs' AND column_name='campaign_id'
         """))
         if not result.fetchone():
             migrations.append("ALTER TABLE email_generation_logs ADD COLUMN campaign_id INTEGER REFERENCES campaigns(id)")
-            print("   ➕ Need to add campaign_id column")
+            print("   ➕ Need to add campaign_id to email_generation_logs")
     except Exception as e:
-        print(f"   ⚠️  Could not check campaign_id: {e}")
+        print(f"   ⚠️  Could not check email_generation_logs.campaign_id: {e}")
     
-    # Check if sender_user_name column exists in email_generation_logs
     try:
         result = db.execute(text("""
-            SELECT column_name 
-            FROM information_schema.columns 
+            SELECT column_name FROM information_schema.columns 
             WHERE table_name='email_generation_logs' AND column_name='sender_user_name'
         """))
         if not result.fetchone():
             migrations.append("ALTER TABLE email_generation_logs ADD COLUMN sender_user_name VARCHAR(255)")
-            print("   ➕ Need to add sender_user_name column")
+            print("   ➕ Need to add sender_user_name to email_generation_logs")
     except Exception as e:
-        print(f"   ⚠️  Could not check sender_user_name: {e}")
+        print(f"   ⚠️  Could not check email_generation_logs.sender_user_name: {e}")
     
     # Run migrations
     if migrations:

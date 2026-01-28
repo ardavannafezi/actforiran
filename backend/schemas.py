@@ -5,6 +5,8 @@ from pydantic import BaseModel, EmailStr, Field
 class CountryOut(BaseModel):
     code: str
     name: str
+    name_persian: Optional[str] = None
+    flag: Optional[str] = None
 
 
 class CountriesResponse(BaseModel):

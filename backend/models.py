@@ -23,8 +23,10 @@ class Administrator(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False)
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
     last_login = Column(DateTime, nullable=True)
+    created_by_admin_id = Column(Integer, ForeignKey("administrators.id"), nullable=True)
 
 
 class Country(Base):
@@ -32,6 +34,8 @@ class Country(Base):
 
     code = Column(String(3), primary_key=True, index=True)
     name = Column(String(100), unique=True, nullable=False)
+    name_persian = Column(String(100), nullable=True)
+    flag = Column(String(10), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
 
@@ -101,6 +105,8 @@ class Campaign(Base):
     is_hot = Column(Boolean, default=False)  # Show on main page
     is_active = Column(Boolean, default=True)
     display_order = Column(Integer, default=0)
+    approval_status = Column(String(20), default="pending")  # pending, approved, rejected
+    approved_by_admin_id = Column(Integer, ForeignKey("administrators.id"), nullable=True)
     
     # Metadata
     created_by_admin_id = Column(Integer, ForeignKey("administrators.id"), nullable=False)
