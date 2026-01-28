@@ -82,6 +82,9 @@ countrySelect.addEventListener('change', async (event) => {
 
 function setStep(step) {
   state.step = step;
+  const progress = ((step - 1) / 4) * 100;
+  stepper.style.setProperty('--progress', `${progress}%`);
+
   document.querySelectorAll('.panel').forEach(panel => {
     panel.classList.toggle('active', Number(panel.dataset.panel) === step);
   });

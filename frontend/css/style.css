@@ -1,14 +1,14 @@
 :root {
-    --bg: #0b0c0f;
-    --bg-soft: #111318;
-    --ink: #f2f2f2;
-    --ink-soft: #b9b9b9;
+    --bg: #050608;
+    --bg-soft: #0b0d12;
+    --ink: #f5f5f5;
+    --ink-soft: #b1b1b1;
     --accent: #e10600;
-    --accent-soft: #ff3b30;
-    --border: #1f232a;
-    --card: #0f1116;
-    --shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
-    --radius-lg: 22px;
+    --accent-soft: #ff2b2b;
+    --border: #1c1f26;
+    --card: #0c0f14;
+    --shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+    --radius-lg: 20px;
     --radius-sm: 12px;
 }
 
@@ -20,23 +20,33 @@
 
 body {
     font-family: "Vazirmatn", "Segoe UI", sans-serif;
-    background: radial-gradient(circle at top right, #10141d 0%, var(--bg) 45%, #090a0e 100%);
+    background: var(--bg);
     color: var(--ink);
     min-height: 100vh;
-    line-height: 1.7;
+    line-height: 1.8;
 }
 
 .bg-ornament {
     position: fixed;
     inset: 0;
-    background: linear-gradient(120deg, rgba(225, 6, 0, 0.14), transparent 50%),
-        radial-gradient(circle at 18% 30%, rgba(255, 59, 48, 0.08), transparent 40%);
+    background: radial-gradient(circle at 80% 20%, rgba(225, 6, 0, 0.12), transparent 45%),
+        radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.05), transparent 50%);
     pointer-events: none;
-    z-index: -1;
+    z-index: -2;
+}
+
+.bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.2;
+    z-index: -3;
 }
 
 .shell {
-    max-width: 1024px;
+    max-width: 1080px;
     margin: 0 auto;
     padding: 64px 24px 90px;
     display: grid;
@@ -46,6 +56,42 @@ body {
 .hero {
     display: grid;
     gap: 18px;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-mark {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+}
+
+.logo small {
+    color: var(--ink-soft);
+}
+
+.badge {
+    background: #11141b;
+    border: 1px solid var(--border);
+    padding: 6px 16px;
+    border-radius: 999px;
+    color: var(--ink-soft);
 }
 
 .ticker {
@@ -77,7 +123,7 @@ body {
 }
 
 h1 {
-    font-size: clamp(2.4rem, 4vw, 3.6rem);
+    font-size: clamp(2.4rem, 4vw, 3.8rem);
 }
 
 .lead {
@@ -88,7 +134,7 @@ h1 {
 .start-panel {
     display: grid;
     gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .start-card {
@@ -123,7 +169,7 @@ h1 {
 .start-icon {
     width: 46px;
     height: 46px;
-    border-radius: 14px;
+    border-radius: 12px;
     background: #171b23;
     display: grid;
     place-items: center;
@@ -162,8 +208,16 @@ h1 {
     right: 10%;
     left: 10%;
     height: 2px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.progress-line span {
+    display: block;
+    height: 100%;
+    width: var(--progress, 0%);
     background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    opacity: 0.3;
+    transition: width 0.4s ease;
 }
 
 .step {
@@ -366,5 +420,10 @@ button.ghost {
 
     .radio-group {
         flex-direction: column;
+    }
+
+    .topbar {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
