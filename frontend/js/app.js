@@ -81,8 +81,8 @@ function initStepper() {
     
     if (campaignChoice) {
         campaignChoice.onclick = function() {
-            // Campaigns are always visible, just scroll to them
-            document.getElementById('campaignsSection').scrollIntoView({ behavior: 'smooth' });
+            // Scroll to campaigns section
+            document.getElementById('campaignsSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
     }
     
@@ -91,7 +91,9 @@ function initStepper() {
             choiceSection.style.display = 'none';
             stepsPreview.style.display = 'block';
             // Scroll to form
-            document.getElementById('step1').scrollIntoView({ behavior: 'smooth' });
+            setTimeout(() => {
+                document.getElementById('step1')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
         };
     }
     
@@ -99,6 +101,8 @@ function initStepper() {
         backToChoiceCustom.onclick = function() {
             choiceSection.style.display = 'block';
             stepsPreview.style.display = 'none';
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             stepsPreview.style.display = 'none';
         };
     }

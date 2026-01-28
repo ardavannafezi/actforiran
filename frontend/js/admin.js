@@ -8,7 +8,7 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
     : 'https://back.actforiran.org';
 
 // State
-let token = localStorage.getItem('adminToken');
+let token = sessionStorage.getItem('adminToken');
 let adminData = null;
 let countries = [];
 let roles = [];
@@ -55,7 +55,7 @@ async function login(email, password) {
         
         const data = await response.json();
         token = data.access_token;
-        localStorage.setItem('adminToken', token);
+        sessionStorage.setItem('adminToken', token);
         
         showDashboard();
         showNotification('ورود موفقیت‌آمیز', 'success');
@@ -68,7 +68,7 @@ async function login(email, password) {
 
 function logout() {
     token = null;
-    localStorage.removeItem('adminToken');
+    sessionStorage.removeItem('adminToken');
     showLogin();
     showNotification('خروج موفقیت‌آمیز', 'success');
 }
