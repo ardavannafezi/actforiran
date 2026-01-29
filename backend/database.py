@@ -41,11 +41,6 @@ def get_db():
 def seed_defaults(db):
     from models import Administrator, Country, RecipientRole, PoliticalRecipient, AdvocacyTopic
 
-    # Check if already seeded
-    if db.query(Administrator).count() > 0:
-        print("Database already seeded, skipping...")
-        return
-
     print("🌱 Seeding initial data...")
 
     # Get admin credentials from environment or use defaults
@@ -55,28 +50,44 @@ def seed_defaults(db):
     admin_email = os.getenv("ADMIN_EMAIL", "moderator@actforiran.org")
     admin_password = os.getenv("ADMIN_PASSWORD", "moderator123")
 
-    # Create super admin
-    super_admin = Administrator(
-        email=super_admin_email,
-        password_hash=get_password_hash(super_admin_password),
-        role="super_admin",
-        is_active=True
-    )
-    db.add(super_admin)
-    db.commit()
-    db.refresh(super_admin)
-    
-    # Create normal admin
-    normal_admin = Administrator(
-        email=admin_email,
-        password_hash=get_password_hash(admin_password),
-        role="admin",
-        is_active=True,
-        created_by_admin_id=super_admin.id
-    )
-    db.add(normal_admin)
-    db.commit()
-    db.refresh(normal_admin)
+    # Ensure super admin exists (and sync password)
+    super_admin = db.query(Administrator).filter(Administrator.email == super_admin_email).first()
+    if not super_admin:
+        super_admin = Administrator(
+            email=super_admin_email,
+            password_hash=get_password_hash(super_admin_password),
+            role="super_admin",
+            is_active=True
+        )
+        db.add(super_admin)
+        db.commit()
+        db.refresh(super_admin)
+    else:
+        super_admin.password_hash = get_password_hash(super_admin_password)
+        super_admin.role = "super_admin"
+        super_admin.is_active = True
+        db.add(super_admin)
+        db.commit()
+
+    # Ensure normal admin exists (and sync password)
+    normal_admin = db.query(Administrator).filter(Administrator.email == admin_email).first()
+    if not normal_admin:
+        normal_admin = Administrator(
+            email=admin_email,
+            password_hash=get_password_hash(admin_password),
+            role="admin",
+            is_active=True,
+            created_by_admin_id=super_admin.id
+        )
+        db.add(normal_admin)
+        db.commit()
+        db.refresh(normal_admin)
+    else:
+        normal_admin.password_hash = get_password_hash(admin_password)
+        normal_admin.role = "admin"
+        normal_admin.is_active = True
+        db.add(normal_admin)
+        db.commit()
 
     # Seed countries (with Persian names and flags)
     if db.query(Country).count() == 0:
