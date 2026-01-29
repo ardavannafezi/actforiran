@@ -49,8 +49,9 @@ def seed_defaults(db):
     print("🌱 Seeding initial data...")
 
     # Get admin credentials from environment or use defaults
-    super_admin_email = os.getenv("SUPER_ADMIN_EMAIL", "admin@actforiran.org")
-    super_admin_password = os.getenv("SUPER_ADMIN_PASSWORD", "admin123")
+    # Support both SUPER_ADMIN_* and INITIAL_ADMIN_* for backward compatibility
+    super_admin_email = os.getenv("SUPER_ADMIN_EMAIL") or os.getenv("INITIAL_ADMIN_EMAIL", "admin@actforiran.org")
+    super_admin_password = os.getenv("SUPER_ADMIN_PASSWORD") or os.getenv("INITIAL_ADMIN_PASSWORD", "admin123")
     admin_email = os.getenv("ADMIN_EMAIL", "moderator@actforiran.org")
     admin_password = os.getenv("ADMIN_PASSWORD", "moderator123")
 
