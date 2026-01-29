@@ -47,12 +47,8 @@ function showNotification(message, type = 'info') {
 
 // Global handler for inline onclick
 window.handleLogin = async function() {
-    console.log('🎯 handleLogin called');
     const email = document.getElementById('loginEmail')?.value;
     const password = document.getElementById('loginPassword')?.value;
-
-    console.log('📧 Email:', email);
-    console.log('🔒 Password length:', password?.length || 0);
 
     if (!email || !password) {
         alert('لطفا ایمیل و رمز عبور را وارد کنید');
@@ -62,24 +58,8 @@ window.handleLogin = async function() {
     await attemptLogin(email, password);
 };
 
-function updateDebug(statusText, statusOk, responseData) {
-    const debugSection = document.getElementById('debugSection');
-    const debugUrl = document.getElementById('debugUrl');
-    const debugStatus = document.getElementById('debugStatus');
-    const debugResponse = document.getElementById('debugResponse');
-    const url = `${API_BASE}/api/v1/admin/auth/login`;
-
-    debugSection.style.display = 'block';
-    debugUrl.textContent = url;
-    debugStatus.textContent = statusText;
-    debugStatus.style.color = statusOk ? '#4ade80' : '#ef4444';
-    debugResponse.textContent = responseData;
-}
-
 async function attemptLogin(email, password) {
-    console.log('🐛 Login request');
     const url = `${API_BASE}/api/v1/admin/auth/login`;
-    updateDebug('Loading...', false, 'Sending request...');
 
     try {
         const response = await fetch(url, {
@@ -89,7 +69,6 @@ async function attemptLogin(email, password) {
         });
 
         const responseData = await response.json();
-        updateDebug(`${response.status} ${response.statusText}`, response.ok, JSON.stringify(responseData, null, 2));
 
         if (response.ok) {
             token = responseData.access_token;
@@ -101,7 +80,6 @@ async function attemptLogin(email, password) {
         }
     } catch (error) {
         console.error('💥 Error:', error);
-        updateDebug('ERROR', false, `Error: ${error.message}\n\nStack: ${error.stack}`);
         showNotification('💥 Network error! Check debug info', 'error');
     }
 }
@@ -612,6 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
 let campaigns = [];
 let campaignTopics = [];
 let campaignRecipients = [];
+let filteredCampaignRecipients = [];
 
 async function loadCampaigns() {
     try {
@@ -741,21 +720,47 @@ async function loadRecipientsForCountry() {
         
         const data = await response.json();
         campaignRecipients = Array.isArray(data) ? data : (data.recipients || []);
-        
-        // Populate recipients select
-        const recipientsSelect = document.getElementById('campaignRecipients');
-        recipientsSelect.innerHTML = campaignRecipients.map(r => 
-            `<option value="${r.id}">${r.full_name} - ${r.custom_title || r.role_name}</option>`
-        ).join('');
+        filteredCampaignRecipients = [...campaignRecipients];
+        renderCampaignRecipients('');
         
     } catch (error) {
         console.error('Error loading recipients:', error);
     }
 }
 
+function renderCampaignRecipients(query) {
+    const recipientsSelect = document.getElementById('campaignRecipients');
+    const search = (query || '').trim().toLowerCase();
+
+    filteredCampaignRecipients = campaignRecipients.filter(r => {
+        const name = (r.full_name || '').toLowerCase();
+        const title = (r.custom_title || r.role_name || '').toLowerCase();
+        const country = (r.country_name || r.country_code || '').toLowerCase();
+        return name.includes(search) || title.includes(search) || country.includes(search);
+    });
+
+    const grouped = filteredCampaignRecipients.reduce((acc, r) => {
+        const key = r.country_name || r.country_code || 'Other';
+        acc[key] = acc[key] || [];
+        acc[key].push(r);
+        return acc;
+    }, {});
+
+    recipientsSelect.innerHTML = Object.keys(grouped).sort().map(country => {
+        const options = grouped[country].map(r =>
+            `<option value="${r.id}">${r.full_name} - ${r.custom_title || r.role_name}</option>`
+        ).join('');
+        return `<optgroup label="${country}">${options}</optgroup>`;
+    }).join('');
+}
+
 // Load recipients without country filter
 document.addEventListener('DOMContentLoaded', () => {
     loadRecipientsForCountry();
+    const recipientsSearch = document.getElementById('campaignRecipientsSearch');
+    if (recipientsSearch) {
+        recipientsSearch.addEventListener('input', (e) => renderCampaignRecipients(e.target.value));
+    }
 });
 
 async function saveCampaign(e) {

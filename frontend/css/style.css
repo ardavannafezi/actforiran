@@ -636,6 +636,7 @@ body {
     width: 20px;
     height: 20px;
     accent-color: var(--accent-red);
+    pointer-events: none;
 }
 
 .checkbox-item .item-content {
