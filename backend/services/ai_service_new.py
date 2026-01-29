@@ -20,39 +20,55 @@ def _build_prompt(
     user_name: str = None,
 ) -> Tuple[str, str]:
     
+    citizenship_map = {
+        "selected_country_citizen": f"a citizen of {country_name}",
+        "iranian_citizen": "an Iranian citizen",
+        "international_supporter": "an international supporter concerned about human rights in Iran"
+    }
+    sender_identity = citizenship_map.get(sender_citizenship_status, "a concerned individual")
+    
     system_prompt = (
-        "You are an email drafting assistant for contacting politicians or public officials.\n"
-        "Your job is to produce one English email that first presents the information clearly, then asks for specific actions.\n"
-        "Rules you must follow:\n\n"
-        "Use only the provided variables. Do not invent recipients, sender details, events, claims, or actions.\n"
-        "The email must clearly show the information first, then ask for the requested action(s).\n"
-        "If any topic includes news or current events, you must use updated information and cite reputable sources provided in the variables. If sources are not provided, do not add news claims.\n"
-        "Do not mention “zan zendegi azadi” or “women life freedom” unless those exact phrases appear in the topic text.\n"
-        "Output must be English only.\n"
-        "Keep it professional and clear.\n"
-        "Output format:\n"
-        "Subject line\n"
-        "Greeting addressing the receiver\n"
-        "Sender identification (name and citizenship status)\n"
-        "Information section (topics, key info, and citations if provided)\n"
-        "Action request section (specific actions, numbered)\n"
-        "Closing with sender name"
+        "You are an expert advocate writing personalized emails to government officials about human rights violations in Iran.\n\n"
+        "CRITICAL RULES:\n"
+        "- Output ONLY plain text - no markdown, no formatting, no asterisks, no bold, no bullets\n"
+        "- Be creative and vary your writing style - never use the same structure twice\n"
+        "- Write naturally flowing paragraphs - do NOT list topics or use numbered points in the main body\n"
+        "- The topic descriptions contain the key information - weave them into compelling narrative prose\n"
+        "- Focus heavily on the topic descriptions provided - they are the heart of the message\n"
+        "- If multiple recipients, address them collectively (e.g., 'Dear Officials', 'Distinguished Representatives')\n"
+        "- Vary your greetings, tone, and structure to make each email unique\n"
+        "- Use only the provided information - do not invent facts, names, or events\n"
+        "- Do NOT include the word 'Subject:' in the subject line - just write the subject text\n"
+        "- If no sender name is provided, write the email without mentioning any name at all\n"
+        "- End with a simple closing (Sincerely, Respectfully, etc.) followed by sender name ONLY if name was provided\n\n"
+        "OUTPUT FORMAT:\n"
+        "Line 1: Subject line (no 'Subject:' prefix)\n"
+        "Line 2: Blank\n"
+        "Line 3: Greeting\n"
+        "Line 4: Blank\n"
+        "Body: Natural flowing paragraphs describing the topics and making the case\n"
+        "Closing: Simple sign-off with name only if provided"
     )
     
+    num_recipients = len(recipient_lines)
+    recipient_description = f"{num_recipients} official(s): {', '.join([r.split('name: ')[1].split(',')[0] for r in recipient_lines if 'name: ' in r])}"
+    
+    topics_text = "\n".join([f"- {line}" for line in topic_lines])
+    
     user_prompt = (
-        "Receivers:\n"
-        f"{chr(10).join(recipient_lines)}\n\n"
-        "Sender name:\n"
-        f"{user_name or ''}\n\n"
-        "Sender citizenship status:\n"
-        f"{sender_citizenship_status}\n\n"
-        "Topics (include information and requested actions):\n"
-        f"{chr(10).join(topic_lines)}\n\n"
-        "Write one email in English that:\n\n"
-        "Clearly presents the information first (by topic), using only the provided topic_information and sources.\n"
-        "Then asks for the requested_action for each topic, as a numbered list.\n"
-        "Includes citations only from the provided sources when mentioned.\n"
-        "Does not mention “zan zendegi azadi” or “women life freedom” unless the exact phrase is in a topic_title or topic_information."
+        f"Write a unique, compelling advocacy email to {recipient_description}.\n\n"
+        f"SENDER: {sender_identity}"
+        + (f" named {user_name}" if user_name else " (no name provided - do not mention sender name in email)")
+        + f"\n\nTOPICS TO ADDRESS:\n{topics_text}\n\n"
+        "INSTRUCTIONS:\n"
+        "- Write the email in plain text only - no formatting marks\n"
+        "- Craft a natural, flowing message that weaves the topic descriptions into compelling prose\n"
+        "- Focus on the human rights concerns described in the topic information\n"
+        "- Be specific about what action you want the recipient(s) to take\n"
+        "- Make this email unique - vary your style, structure, and approach\n"
+        "- If multiple recipients, use plural addressing ('you' can be plural, or use collective terms)\n"
+        "- First line must be the subject (without the word 'Subject:')\n"
+        + ("- End with sender name only if provided (it is: " + user_name + ")" if user_name else "- Do not include sender name since none was provided")
     )
 
     return system_prompt, user_prompt
@@ -63,7 +79,13 @@ def _parse_subject_body(text: str) -> Tuple[str, str]:
     if not lines:
         return "Urgent: Action Needed on Iran Human Rights Crisis", ""
 
-    subject = lines[0][:60]
+    subject = lines[0]
+    if subject.lower().startswith("subject:"):
+        subject = subject[8:].strip()
+    
+    if len(subject) > 78:
+        subject = subject[:75] + "..."
+    
     body = "\n".join(lines[1:]) if len(lines) > 1 else ""
     return subject, body
 
@@ -116,7 +138,7 @@ async def generate_email(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "temperature": 0.9,  # Higher for more variation
+        "temperature": 0.9,
         "max_completion_tokens": 800,
     }
 

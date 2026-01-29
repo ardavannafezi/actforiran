@@ -186,100 +186,114 @@ async def generate_email_endpoint(
     payload: GenerateEmailRequest,
     db: Session = Depends(get_db),
 ):
-    if not os.getenv("OPENAI_API_KEY"):
-        raise HTTPException(status_code=503, detail="AI service is not configured")
-    country = db.query(Country).filter(Country.code == payload.country_code.upper()).first()
-    if not country:
-        raise HTTPException(status_code=400, detail="Invalid country code")
+    try:
+        if not os.getenv("OPENAI_API_KEY"):
+            raise HTTPException(status_code=503, detail="AI service is not configured")
+        
+        country = db.query(Country).filter(Country.code == payload.country_code.upper()).first()
+        if not country:
+            raise HTTPException(status_code=400, detail="Invalid country code")
 
-    recipients = (
-        db.query(PoliticalRecipient, RecipientRole.name.label("role_name"))
-        .join(RecipientRole, PoliticalRecipient.role_id == RecipientRole.id)
-        .filter(PoliticalRecipient.id.in_(payload.recipient_ids))
-        .filter(PoliticalRecipient.approval_status == "approved")
-        .filter(PoliticalRecipient.is_active.is_(True))
-        .all()
-    )
-    if len(recipients) != len(payload.recipient_ids):
-        raise HTTPException(status_code=400, detail="One or more recipients are invalid")
+        recipients = (
+            db.query(PoliticalRecipient, RecipientRole.name.label("role_name"))
+            .join(RecipientRole, PoliticalRecipient.role_id == RecipientRole.id)
+            .filter(PoliticalRecipient.id.in_(payload.recipient_ids))
+            .filter(PoliticalRecipient.approval_status == "approved")
+            .filter(PoliticalRecipient.is_active.is_(True))
+            .all()
+        )
+        if len(recipients) != len(payload.recipient_ids):
+            raise HTTPException(status_code=400, detail="One or more recipients are invalid")
 
-    topics = (
-        db.query(AdvocacyTopic)
-        .filter(AdvocacyTopic.id.in_(payload.topic_ids))
-        .filter(AdvocacyTopic.approval_status == "approved")
-        .filter(AdvocacyTopic.is_active.is_(True))
-        .all()
-    )
-    if len(topics) != len(payload.topic_ids):
-        raise HTTPException(status_code=400, detail="One or more topics are invalid")
+        topics = (
+            db.query(AdvocacyTopic)
+            .filter(AdvocacyTopic.id.in_(payload.topic_ids))
+            .filter(AdvocacyTopic.approval_status == "approved")
+            .filter(AdvocacyTopic.is_active.is_(True))
+            .all()
+        )
+        if len(topics) != len(payload.topic_ids):
+            raise HTTPException(status_code=400, detail="One or more topics are invalid")
 
-    topics_payload = [
-        {
-            "id": t.id,
-            "display_title": t.display_title,
-            "description": t.description or "",
-            "requested_action": "",
-            "sources": [],
-        }
-        for t in topics
-    ]
-
-    token_usage = 0
-    sender_citizenship_status = payload.sender_citizenship_status
-    if not sender_citizenship_status and payload.is_resident is not None:
-        sender_citizenship_status = "selected_country_citizen" if payload.is_resident else "international_supporter"
-
-    if sender_citizenship_status not in ["international_supporter", "iranian_citizen", "selected_country_citizen"]:
-        raise HTTPException(status_code=400, detail="Invalid sender citizenship status")
-
-    recipients_by_id = {r[0].id: r for r in recipients}
-    ordered_recipient_ids = payload.recipient_ids
-
-    def chunk_list(items, size):
-        return [items[i:i + size] for i in range(0, len(items), size)]
-
-    groups = []
-    for group_ids in chunk_list(ordered_recipient_ids, 15):
-        group_recipients = [recipients_by_id[rid] for rid in group_ids if rid in recipients_by_id]
-        group_payload = [
+        topics_payload = [
             {
-                "id": r[0].id,
-                "full_name": r[0].full_name,
-                "email_address": r[0].email_address,
-                "display_title": r[0].custom_title or r[1],
+                "id": t.id,
+                "display_title": t.display_title,
+                "description": t.description or "",
+                "requested_action": "",
+                "sources": [],
             }
-            for r in group_recipients
+            for t in topics
         ]
 
-        try:
-            subject, body, used_tokens = await generate_email(
-                country_name=country.name,
-                recipients=group_payload,
-                topics=topics_payload,
-                sender_citizenship_status=sender_citizenship_status,
-                user_name=payload.user_name,
+        token_usage = 0
+        sender_citizenship_status = payload.sender_citizenship_status
+        if not sender_citizenship_status and payload.is_resident is not None:
+            sender_citizenship_status = "selected_country_citizen" if payload.is_resident else "international_supporter"
+
+        if sender_citizenship_status not in ["international_supporter", "iranian_citizen", "selected_country_citizen"]:
+            raise HTTPException(status_code=400, detail="Invalid sender citizenship status")
+
+        recipients_by_id = {r[0].id: r for r in recipients}
+        ordered_recipient_ids = payload.recipient_ids
+
+        def chunk_list(items, size):
+            return [items[i:i + size] for i in range(0, len(items), size)]
+
+        groups = []
+        for group_ids in chunk_list(ordered_recipient_ids, 15):
+            group_recipients = [recipients_by_id[rid] for rid in group_ids if rid in recipients_by_id]
+            group_payload = [
+                {
+                    "id": r[0].id,
+                    "full_name": r[0].full_name,
+                    "email_address": r[0].email_address,
+                    "display_title": r[0].custom_title or r[1],
+                }
+                for r in group_recipients
+            ]
+
+            try:
+                subject, body, used_tokens = await generate_email(
+                    country_name=country.name,
+                    recipients=group_payload,
+                    topics=topics_payload,
+                    sender_citizenship_status=sender_citizenship_status,
+                    user_name=payload.user_name,
+                )
+                token_usage += used_tokens
+            except AIServiceError as exc:
+                print(f"❌ AI Service Error: {str(exc)}")
+                raise HTTPException(status_code=500, detail=f"AI service error: {str(exc)}") from exc
+            except Exception as exc:
+                print(f"❌ Unexpected error during email generation: {str(exc)}")
+                raise HTTPException(status_code=500, detail=f"Failed to generate email: {str(exc)}") from exc
+
+            recipient_emails = [r[0].email_address for r in group_recipients]
+            mailto_recipients = ",".join(recipient_emails)
+            mailto_link = (
+                f"mailto:{mailto_recipients}?subject={quote(subject)}&body={quote(body)}"
+                if subject and body
+                else ""
             )
-            token_usage += used_tokens
-        except AIServiceError as exc:
-            raise HTTPException(status_code=502, detail="AI service failed to generate email") from exc
 
-        recipient_emails = [r[0].email_address for r in group_recipients]
-        mailto_recipients = ",".join(recipient_emails)
-        mailto_link = (
-            f"mailto:{mailto_recipients}?subject={quote(subject)}&body={quote(body)}"
-            if subject and body
-            else ""
-        )
+            groups.append({
+                "subject": subject,
+                "body": body,
+                "recipients": [{"name": r[0].full_name, "email": r[0].email_address} for r in group_recipients],
+                "recipient_ids": group_ids,
+                "mailto_link": mailto_link,
+            })
 
-        groups.append({
-            "subject": subject,
-            "body": body,
-            "recipients": [{"name": r[0].full_name, "email": r[0].email_address} for r in group_recipients],
-            "recipient_ids": group_ids,
-            "mailto_link": mailto_link,
-        })
-
-    return {"groups": groups}
+        return {"groups": groups}
+    
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"❌ Unexpected error in generate_email_endpoint: {str(exc)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(exc)}") from exc
 
 
 @router.post("/log-email-send")
