@@ -40,6 +40,58 @@ function showNotification(message, type = 'info') {
 // ============================================
 // AUTHENTICATION
 // ============================================
+async function debugLogin(email, password) {
+    const debugSection = document.getElementById('debugSection');
+    const debugUrl = document.getElementById('debugUrl');
+    const debugStatus = document.getElementById('debugStatus');
+    const debugResponse = document.getElementById('debugResponse');
+    
+    const url = `${API_BASE}/api/v1/admin/auth/login`;
+    
+    console.log('🐛 DEBUG MODE: Testing login API');
+    console.log('📧 Email:', email);
+    console.log('🔗 URL:', url);
+    
+    debugSection.style.display = 'block';
+    debugUrl.textContent = url;
+    debugStatus.textContent = 'Loading...';
+    debugStatus.style.color = '#fbbf24';
+    debugResponse.textContent = 'Sending request...';
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const responseData = await response.json();
+        
+        // Display status
+        debugStatus.textContent = `${response.status} ${response.statusText}`;
+        debugStatus.style.color = response.ok ? '#4ade80' : '#ef4444';
+        
+        // Display response
+        debugResponse.textContent = JSON.stringify(responseData, null, 2);
+        
+        console.log('📡 Response Status:', response.status);
+        console.log('📦 Response Data:', responseData);
+        
+        if (response.ok) {
+            showNotification('✅ Login successful! Check debug info below', 'success');
+        } else {
+            showNotification('❌ Login failed! Check debug info below', 'error');
+        }
+        
+    } catch (error) {
+        console.error('💥 Error:', error);
+        debugStatus.textContent = 'ERROR';
+        debugStatus.style.color = '#ef4444';
+        debugResponse.textContent = `Error: ${error.message}\n\nStack: ${error.stack}`;
+        showNotification('💥 Network error! Check debug info', 'error');
+    }
+}
+
 async function login(email, password) {
     console.log('🔐 Attempting login for:', email);
     try {
@@ -495,12 +547,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (loginFormElement) {
         console.log('✅ Login form found');
-        loginFormElement.addEventListener('submit', (e) => {
+        loginFormElement.addEventListener('submit', async (e) => {
             e.preventDefault();
             console.log('📝 Login form submitted');
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
-            login(email, password);
+            
+            // DEBUG MODE: Show API response instead of logging in
+            await debugLogin(email, password);
         });
     } else {
         console.error('❌ Login form not found');
