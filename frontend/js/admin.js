@@ -644,13 +644,12 @@ function renderCampaigns() {
         <div class="campaign-admin-card ${campaign.is_hot ? 'is-hot' : ''}">
             <div class="campaign-admin-header">
                 <div class="campaign-admin-icon">${campaign.icon}</div>
-                <div class="campaign-admin-info">
-                    <div class="campaign-admin-title">${campaign.title}</div>
-                    <div class="campaign-admin-country">
-                        <span>${campaign.country.flag}</span>
-                        <span>${campaign.country.name}</span>
-                    </div>
+            <div class="campaign-admin-info">
+                <div class="campaign-admin-title">${campaign.title}</div>
+                <div class="campaign-admin-country">
+                    <span>Recipients: ${campaign.recipient_ids.length}</span>
                 </div>
+            </div>
             </div>
             <div class="campaign-admin-description">${campaign.description || ''}</div>
             <div class="campaign-admin-stats">
@@ -672,14 +671,9 @@ async function openCampaignModal(campaignId = null) {
     const title = document.getElementById('campaignModalTitle');
     const form = document.getElementById('campaignForm');
     
-    // Load countries, recipients, topics for selects
-    await loadCountries();
+    // Load recipients and topics for selects
     await loadAllTopics();
-    
-    // Populate country select
-    const countrySelect = document.getElementById('campaignCountry');
-    countrySelect.innerHTML = '<option value="">انتخاب کشور...</option>' + 
-        countries.map(c => `<option value="${c.code}">${c.flag} ${c.name}</option>`).join('');
+    await loadRecipientsForCountry();
     
     // Populate topics select
     const topicsSelect = document.getElementById('campaignTopics');
@@ -698,12 +692,8 @@ async function openCampaignModal(campaignId = null) {
         document.getElementById('campaignSlug').value = campaign.slug;
         document.getElementById('campaignDescription').value = campaign.description || '';
         document.getElementById('campaignIcon').value = campaign.icon || '';
-        document.getElementById('campaignCountry').value = campaign.country.code;
         document.getElementById('campaignIsHot').checked = campaign.is_hot;
         document.getElementById('campaignDisplayOrder').value = campaign.display_order || 0;
-        
-        // Load recipients for this country
-        await loadRecipientsForCountry(campaign.country.code);
         
         // Select recipients
         Array.from(document.getElementById('campaignRecipients').options).forEach(opt => {
@@ -719,7 +709,7 @@ async function openCampaignModal(campaignId = null) {
         title.textContent = 'افزودن کمپین';
         form.reset();
         document.getElementById('campaignId').value = '';
-        document.getElementById('campaignRecipients').innerHTML = '<option value="">ابتدا کشور را انتخاب کنید</option>';
+        document.getElementById('campaignRecipients').innerHTML = '';
     }
     
     modal.classList.add('active');
@@ -734,28 +724,28 @@ async function loadAllTopics() {
         if (!response.ok) throw new Error('Failed to load topics');
         
         const data = await response.json();
-        campaignTopics = data.topics || [];
+        campaignTopics = Array.isArray(data) ? data : (data.topics || []);
         
     } catch (error) {
         console.error('Error loading topics:', error);
     }
 }
 
-async function loadRecipientsForCountry(countryCode) {
+async function loadRecipientsForCountry() {
     try {
-        const response = await fetch(`${API_BASE}/api/v1/admin/recipients?country_code=${countryCode}`, {
+        const response = await fetch(`${API_BASE}/api/v1/admin/recipients`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
         if (!response.ok) throw new Error('Failed to load recipients');
         
         const data = await response.json();
-        campaignRecipients = data.recipients || [];
+        campaignRecipients = Array.isArray(data) ? data : (data.recipients || []);
         
         // Populate recipients select
         const recipientsSelect = document.getElementById('campaignRecipients');
         recipientsSelect.innerHTML = campaignRecipients.map(r => 
-            `<option value="${r.id}">${r.full_name} - ${r.display_title}</option>`
+            `<option value="${r.id}">${r.full_name} - ${r.custom_title || r.role_name}</option>`
         ).join('');
         
     } catch (error) {
@@ -763,18 +753,9 @@ async function loadRecipientsForCountry(countryCode) {
     }
 }
 
-// Handle country change to load recipients
+// Load recipients without country filter
 document.addEventListener('DOMContentLoaded', () => {
-    const countrySelect = document.getElementById('campaignCountry');
-    if (countrySelect) {
-        countrySelect.addEventListener('change', async (e) => {
-            if (e.target.value) {
-                await loadRecipientsForCountry(e.target.value);
-            } else {
-                document.getElementById('campaignRecipients').innerHTML = '<option value="">ابتدا کشور را انتخاب کنید</option>';
-            }
-        });
-    }
+    loadRecipientsForCountry();
 });
 
 async function saveCampaign(e) {
@@ -799,7 +780,6 @@ async function saveCampaign(e) {
         slug: document.getElementById('campaignSlug').value,
         description: document.getElementById('campaignDescription').value || '',
         icon: document.getElementById('campaignIcon').value || '🔥',
-        country_code: document.getElementById('campaignCountry').value,
         recipient_ids: recipientIds,
         topic_ids: topicIds,
         is_hot: document.getElementById('campaignIsHot').checked,
@@ -941,7 +921,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tbody = document.getElementById('adminsTableBody');
         
         try {
-            const response = await fetch(`${API_BASE}/admin/admins`, {
+            const response = await fetch(`${API_BASE}/api/v1/admin/admins`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -991,7 +971,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (password) payload.password = password;
         
         const token = sessionStorage.getItem('adminToken');
-        const url = id ? `${API_BASE}/admin/admins/${id}` : `${API_BASE}/admin/admins`;
+        const url = id ? `${API_BASE}/api/v1/admin/admins/${id}` : `${API_BASE}/api/v1/admin/admins`;
         const method = id ? 'PUT' : 'POST';
         
         try {
@@ -1011,9 +991,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             closeModal('adminModal');
             loadAdmins();
-            showToast(id ? 'مدیر ویرایش شد' : 'مدیر جدید اضافه شد', 'success');
+            showNotification(id ? 'مدیر ویرایش شد' : 'مدیر جدید اضافه شد', 'success');
         } catch (error) {
-            showToast(error.message, 'error');
+            showNotification(error.message, 'error');
         }
     });
 
@@ -1021,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const token = sessionStorage.getItem('adminToken');
         
         try {
-            const response = await fetch(`${API_BASE}/admin/admins`, {
+            const response = await fetch(`${API_BASE}/api/v1/admin/admins`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -1042,7 +1022,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             openModal('adminModal');
         } catch (error) {
-            showToast(error.message, 'error');
+            showNotification(error.message, 'error');
         }
     };
 
@@ -1052,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const token = sessionStorage.getItem('adminToken');
         
         try {
-            const response = await fetch(`${API_BASE}/admin/admins/${id}`, {
+            const response = await fetch(`${API_BASE}/api/v1/admin/admins/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -1063,9 +1043,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             loadAdmins();
-            showToast('مدیر حذف شد', 'success');
+            showNotification('مدیر حذف شد', 'success');
         } catch (error) {
-            showToast(error.message, 'error');
+            showNotification(error.message, 'error');
         }
     };
 
@@ -1093,7 +1073,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         const token = sessionStorage.getItem('adminToken');
-        const url = originalCode ? `${API_BASE}/admin/countries/${originalCode}` : `${API_BASE}/admin/countries`;
+        const url = originalCode ? `${API_BASE}/api/v1/admin/countries/${originalCode}` : `${API_BASE}/api/v1/admin/countries`;
         const method = originalCode ? 'PUT' : 'POST';
         
         try {
@@ -1113,9 +1093,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             closeModal('countryModal');
             loadCountries();
-            showToast(originalCode ? 'کشور ویرایش شد' : 'کشور جدید اضافه شد', 'success');
+            showNotification(originalCode ? 'کشور ویرایش شد' : 'کشور جدید اضافه شد', 'success');
         } catch (error) {
-            showToast(error.message, 'error');
+            showNotification(error.message, 'error');
         }
     });
 
@@ -1136,7 +1116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const token = sessionStorage.getItem('adminToken');
         
         try {
-            const response = await fetch(`${API_BASE}/admin/countries/${code}`, {
+            const response = await fetch(`${API_BASE}/api/v1/admin/countries/${code}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -1147,9 +1127,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             loadCountries();
-            showToast('کشور حذف شد', 'success');
+            showNotification('کشور حذف شد', 'success');
         } catch (error) {
-            showToast(error.message, 'error');
+            showNotification(error.message, 'error');
         }
     };
 
@@ -1160,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('pendingCampaignsList');
         
         try {
-            const response = await fetch(`${API_BASE}/admin/campaigns/pending`, {
+            const response = await fetch(`${API_BASE}/api/v1/admin/campaigns/pending`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -1182,9 +1162,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <p class="campaign-admin-description">${campaign.description || ''}</p>
                     <div class="campaign-admin-meta">
-                        <span>🌍 ${campaign.country.flag} ${campaign.country.name}</span>
-                        <span>👥 ${campaign.recipient_count} گیرنده</span>
-                        <span>📋 ${campaign.topic_count} موضوع</span>
+                        <span>👥 ${campaign.recipient_ids.length} گیرنده</span>
+                        <span>📋 ${campaign.topic_ids.length} موضوع</span>
                     </div>
                     <div class="campaign-admin-actions" style="margin-top: 16px;">
                         <button class="btn btn-success" onclick="approveCampaign(${campaign.id})" style="flex: 1;">✅ تایید</button>
@@ -1211,9 +1190,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             loadPendingCampaigns();
             loadCampaigns();
-            showToast('کمپین تایید شد', 'success');
+            showNotification('کمپین تایید شد', 'success');
         } catch (error) {
-            showToast(error.message, 'error');
+            showNotification(error.message, 'error');
         }
     };
 
@@ -1235,9 +1214,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Failed to reject campaign');
             
             loadPendingCampaigns();
-            showToast('کمپین رد شد', 'error');
+            showNotification('کمپین رد شد', 'error');
         } catch (error) {
-            showToast(error.message, 'error');
+            showNotification(error.message, 'error');
         }
     };
 

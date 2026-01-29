@@ -9,6 +9,7 @@ from models import (
     AdminActivityLog,
     AdvocacyTopic,
     Administrator,
+    Campaign,
     Country,
     PoliticalRecipient,
     RecipientRole,
@@ -21,6 +22,9 @@ from schemas import (
     AdvocacyTopicCreate,
     AdvocacyTopicUpdate,
     ApprovalRequest,
+    CampaignCreate,
+    CampaignOut,
+    CampaignUpdate,
     PoliticalRecipientAdminOut,
     PoliticalRecipientCreate,
     PoliticalRecipientUpdate,
@@ -30,6 +34,7 @@ from schemas import (
 from services.auth import (
     create_access_token,
     get_current_admin,
+    get_password_hash,
     require_super_admin,
     verify_password,
 )
@@ -117,6 +122,211 @@ async def create_role(
     db.commit()
 
     return {"id": role.id, "name": role.name, "is_active": role.is_active}
+
+
+@router.get("/admins")
+async def list_admins(
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin),
+):
+    admins = db.query(Administrator).order_by(Administrator.created_at.desc()).all()
+    return {
+        "admins": [
+            {
+                "id": a.id,
+                "email": a.email,
+                "role": a.role,
+                "is_active": a.is_active,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "last_login": a.last_login.isoformat() if a.last_login else None,
+            }
+            for a in admins
+        ]
+    }
+
+
+@router.post("/admins")
+async def create_admin(
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin),
+):
+    existing = db.query(Administrator).filter(Administrator.email == payload["email"]).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    new_admin = Administrator(
+        email=payload["email"],
+        password_hash=get_password_hash(payload["password"]),
+        role=payload.get("role", "admin"),
+        is_active=payload.get("is_active", True),
+        created_by_admin_id=admin.id,
+    )
+    db.add(new_admin)
+    db.commit()
+    db.refresh(new_admin)
+
+    log_action(db, admin, "CREATE_ADMIN", "administrator", new_admin.id, {"email": new_admin.email}, request)
+    db.commit()
+
+    return {
+        "id": new_admin.id,
+        "email": new_admin.email,
+        "role": new_admin.role,
+        "is_active": new_admin.is_active,
+    }
+
+
+@router.put("/admins/{admin_id}")
+async def update_admin(
+    admin_id: int,
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin),
+):
+    target_admin = db.query(Administrator).filter(Administrator.id == admin_id).first()
+    if not target_admin:
+        raise HTTPException(status_code=404, detail="Administrator not found")
+
+    if "email" in payload:
+        existing = db.query(Administrator).filter(
+            Administrator.email == payload["email"],
+            Administrator.id != admin_id,
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already exists")
+        target_admin.email = payload["email"]
+
+    if "password" in payload and payload["password"]:
+        target_admin.password_hash = get_password_hash(payload["password"])
+
+    if "role" in payload:
+        target_admin.role = payload["role"]
+
+    if "is_active" in payload:
+        target_admin.is_active = payload["is_active"]
+
+    db.add(target_admin)
+    db.commit()
+
+    log_action(db, admin, "UPDATE_ADMIN", "administrator", admin_id, {"updated_fields": list(payload.keys())}, request)
+    db.commit()
+
+    return {
+        "id": target_admin.id,
+        "email": target_admin.email,
+        "role": target_admin.role,
+        "is_active": target_admin.is_active,
+    }
+
+
+@router.delete("/admins/{admin_id}")
+async def delete_admin(
+    admin_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin),
+):
+    if admin_id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+
+    target_admin = db.query(Administrator).filter(Administrator.id == admin_id).first()
+    if not target_admin:
+        raise HTTPException(status_code=404, detail="Administrator not found")
+
+    log_action(db, admin, "DELETE_ADMIN", "administrator", admin_id, {"email": target_admin.email}, request)
+    db.delete(target_admin)
+    db.commit()
+    return {"message": "Administrator deleted successfully"}
+
+
+@router.post("/countries")
+async def add_country(
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin),
+):
+    existing = db.query(Country).filter(Country.code == payload["code"].upper()).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Country code already exists")
+
+    country = Country(
+        code=payload["code"].upper(),
+        name=payload["name"],
+        name_persian=payload.get("name_persian", ""),
+        flag=payload.get("flag", ""),
+        is_active=payload.get("is_active", True),
+    )
+    db.add(country)
+    db.commit()
+    db.refresh(country)
+
+    log_action(db, admin, "CREATE_COUNTRY", "country", None, {"code": country.code}, request)
+    db.commit()
+
+    return {
+        "code": country.code,
+        "name": country.name,
+        "name_persian": country.name_persian,
+        "flag": country.flag,
+        "is_active": country.is_active,
+    }
+
+
+@router.put("/countries/{country_code}")
+async def update_country(
+    country_code: str,
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin),
+):
+    country = db.query(Country).filter(Country.code == country_code.upper()).first()
+    if not country:
+        raise HTTPException(status_code=404, detail="Country not found")
+
+    if "name" in payload:
+        country.name = payload["name"]
+    if "name_persian" in payload:
+        country.name_persian = payload["name_persian"]
+    if "flag" in payload:
+        country.flag = payload["flag"]
+    if "is_active" in payload:
+        country.is_active = payload["is_active"]
+
+    db.add(country)
+    db.commit()
+
+    log_action(db, admin, "UPDATE_COUNTRY", "country", None, {"code": country.code}, request)
+    db.commit()
+
+    return {
+        "code": country.code,
+        "name": country.name,
+        "name_persian": country.name_persian,
+        "flag": country.flag,
+        "is_active": country.is_active,
+    }
+
+
+@router.delete("/countries/{country_code}")
+async def delete_country(
+    country_code: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin),
+):
+    country = db.query(Country).filter(Country.code == country_code.upper()).first()
+    if not country:
+        raise HTTPException(status_code=404, detail="Country not found")
+
+    log_action(db, admin, "DELETE_COUNTRY", "country", None, {"code": country.code}, request)
+    db.delete(country)
+    db.commit()
+    return {"message": "Country deleted successfully"}
 
 
 @router.get("/recipients", response_model=list[PoliticalRecipientAdminOut])
@@ -559,6 +769,239 @@ async def reject_topic(
         {"reason": payload.reason},
         request,
     )
+    db.commit()
+    return {"status": "rejected"}
+
+
+@router.get("/campaigns", response_model=list[CampaignOut])
+async def list_campaigns(
+    approval_status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin),
+):
+    query = db.query(Campaign)
+    if approval_status:
+        query = query.filter(Campaign.approval_status == approval_status)
+    campaigns = query.order_by(Campaign.display_order).all()
+    return [
+        {
+            "id": c.id,
+            "title": c.title,
+            "slug": c.slug,
+            "description": c.description,
+            "icon": c.icon,
+            "country_code": c.country_code,
+            "recipient_ids": c.recipient_ids,
+            "topic_ids": c.topic_ids,
+            "is_hot": c.is_hot,
+            "is_active": c.is_active,
+            "display_order": c.display_order,
+            "approval_status": c.approval_status,
+        }
+        for c in campaigns
+    ]
+
+
+@router.get("/campaigns/pending", response_model=list[CampaignOut])
+async def list_pending_campaigns(
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin),
+):
+    campaigns = db.query(Campaign).filter(Campaign.approval_status == "pending").all()
+    return [
+        {
+            "id": c.id,
+            "title": c.title,
+            "slug": c.slug,
+            "description": c.description,
+            "icon": c.icon,
+            "country_code": c.country_code,
+            "recipient_ids": c.recipient_ids,
+            "topic_ids": c.topic_ids,
+            "is_hot": c.is_hot,
+            "is_active": c.is_active,
+            "display_order": c.display_order,
+            "approval_status": c.approval_status,
+        }
+        for c in campaigns
+    ]
+
+
+@router.post("/campaigns", response_model=CampaignOut)
+async def create_campaign(
+    payload: CampaignCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin),
+):
+    existing = db.query(Campaign).filter(Campaign.slug == payload.slug).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Slug already exists")
+
+    recipient_ids = payload.recipient_ids or []
+    topic_ids = payload.topic_ids or []
+    if not recipient_ids or not topic_ids:
+        raise HTTPException(status_code=400, detail="Recipients and topics are required")
+
+    country_code = payload.country_code
+    if not country_code:
+        first_recipient = db.query(PoliticalRecipient).filter(PoliticalRecipient.id == recipient_ids[0]).first()
+        if not first_recipient:
+            raise HTTPException(status_code=400, detail="Invalid recipients")
+        country_code = first_recipient.country_code
+
+    approval_status = "approved" if admin.role == "super_admin" else "pending"
+
+    campaign = Campaign(
+        title=payload.title,
+        slug=payload.slug,
+        description=payload.description,
+        icon=payload.icon or "🔥",
+        country_code=country_code,
+        recipient_ids=recipient_ids,
+        topic_ids=topic_ids,
+        is_hot=payload.is_hot,
+        is_active=payload.is_active,
+        display_order=payload.display_order,
+        approval_status=approval_status,
+        created_by_admin_id=admin.id,
+        approved_by_admin_id=admin.id if approval_status == "approved" else None,
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+
+    log_action(db, admin, "CREATE_CAMPAIGN", "campaign", campaign.id, {"title": campaign.title}, request)
+    db.commit()
+
+    return {
+        "id": campaign.id,
+        "title": campaign.title,
+        "slug": campaign.slug,
+        "description": campaign.description,
+        "icon": campaign.icon,
+        "country_code": campaign.country_code,
+        "recipient_ids": campaign.recipient_ids,
+        "topic_ids": campaign.topic_ids,
+        "is_hot": campaign.is_hot,
+        "is_active": campaign.is_active,
+        "display_order": campaign.display_order,
+        "approval_status": campaign.approval_status,
+    }
+
+
+@router.put("/campaigns/{campaign_id}", response_model=CampaignOut)
+async def update_campaign(
+    campaign_id: int,
+    payload: CampaignUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin),
+):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    if payload.title is not None:
+        campaign.title = payload.title
+    if payload.slug is not None:
+        campaign.slug = payload.slug
+    if payload.description is not None:
+        campaign.description = payload.description
+    if payload.icon is not None:
+        campaign.icon = payload.icon
+    if payload.country_code is not None:
+        campaign.country_code = payload.country_code
+    if payload.recipient_ids is not None:
+        campaign.recipient_ids = payload.recipient_ids
+    if payload.topic_ids is not None:
+        campaign.topic_ids = payload.topic_ids
+    if payload.is_hot is not None:
+        campaign.is_hot = payload.is_hot
+    if payload.is_active is not None:
+        campaign.is_active = payload.is_active
+    if payload.display_order is not None:
+        campaign.display_order = payload.display_order
+
+    if admin.role != "super_admin":
+        campaign.approval_status = "pending"
+        campaign.approved_by_admin_id = None
+
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+
+    log_action(db, admin, "UPDATE_CAMPAIGN", "campaign", campaign.id, {"title": campaign.title}, request)
+    db.commit()
+
+    return {
+        "id": campaign.id,
+        "title": campaign.title,
+        "slug": campaign.slug,
+        "description": campaign.description,
+        "icon": campaign.icon,
+        "country_code": campaign.country_code,
+        "recipient_ids": campaign.recipient_ids,
+        "topic_ids": campaign.topic_ids,
+        "is_hot": campaign.is_hot,
+        "is_active": campaign.is_active,
+        "display_order": campaign.display_order,
+        "approval_status": campaign.approval_status,
+    }
+
+
+@router.delete("/campaigns/{campaign_id}")
+async def delete_campaign(
+    campaign_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin),
+):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    db.delete(campaign)
+    log_action(db, admin, "DELETE_CAMPAIGN", "campaign", campaign_id, {"title": campaign.title}, request)
+    db.commit()
+    return {"status": "deleted"}
+
+
+@router.post("/campaigns/{campaign_id}/approve")
+async def approve_campaign(
+    campaign_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin),
+):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    campaign.approval_status = "approved"
+    campaign.approved_by_admin_id = admin.id
+    db.add(campaign)
+    log_action(db, admin, "APPROVE_CAMPAIGN", "campaign", campaign_id, None, request)
+    db.commit()
+    return {"status": "approved"}
+
+
+@router.post("/campaigns/{campaign_id}/reject")
+async def reject_campaign(
+    campaign_id: int,
+    payload: ApprovalRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin),
+):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    campaign.approval_status = "rejected"
+    campaign.approved_by_admin_id = admin.id
+    db.add(campaign)
+    log_action(db, admin, "REJECT_CAMPAIGN", "campaign", campaign_id, {"reason": payload.reason}, request)
     db.commit()
     return {"status": "rejected"}
 

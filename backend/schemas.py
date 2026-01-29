@@ -139,3 +139,44 @@ class AdvocacyTopicAdminOut(BaseModel):
 
 class ApprovalRequest(BaseModel):
     reason: Optional[str] = Field(None, max_length=500)
+
+
+class CampaignCreate(BaseModel):
+    title: str = Field(..., min_length=2, max_length=255)
+    slug: str = Field(..., min_length=2, max_length=100)
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    country_code: Optional[str] = Field(None, min_length=3, max_length=3)
+    recipient_ids: List[int]
+    topic_ids: List[int]
+    is_hot: bool = False
+    display_order: int = 0
+    is_active: bool = True
+
+
+class CampaignUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=2, max_length=255)
+    slug: Optional[str] = Field(None, min_length=2, max_length=100)
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    country_code: Optional[str] = Field(None, min_length=3, max_length=3)
+    recipient_ids: Optional[List[int]] = None
+    topic_ids: Optional[List[int]] = None
+    is_hot: Optional[bool] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class CampaignOut(BaseModel):
+    id: int
+    title: str
+    slug: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    country_code: Optional[str] = None
+    recipient_ids: List[int]
+    topic_ids: List[int]
+    is_hot: bool
+    is_active: bool
+    display_order: int
+    approval_status: str
