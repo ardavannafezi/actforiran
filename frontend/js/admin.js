@@ -543,21 +543,28 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Setup event listeners
     const loginFormElement = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
     const logoutBtnElement = document.getElementById('logoutBtn');
     
-    if (loginFormElement) {
-        console.log('✅ Login form found');
-        loginFormElement.addEventListener('submit', async (e) => {
+    if (loginBtn) {
+        console.log('✅ Login button found');
+        loginBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            console.log('📝 Login form submitted');
+            e.stopPropagation();
+            console.log('📝 Login button clicked');
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showNotification('لطفا ایمیل و رمز عبور را وارد کنید', 'error');
+                return;
+            }
             
             // DEBUG MODE: Show API response instead of logging in
             await debugLogin(email, password);
         });
     } else {
-        console.error('❌ Login form not found');
+        console.error('❌ Login button not found');
     }
     
     if (logoutBtnElement) {
