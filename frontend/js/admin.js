@@ -3,9 +3,13 @@
  * Persian RTL Admin Dashboard
  */
 
+console.log('🚀 Admin.js loaded at:', new Date().toISOString());
+
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000'
     : 'https://back.actforiran.org';
+
+console.log('📡 API Base configured:', API_BASE);
 
 // State
 let token = sessionStorage.getItem('adminToken');
@@ -40,6 +44,24 @@ function showNotification(message, type = 'info') {
 // ============================================
 // AUTHENTICATION
 // ============================================
+
+// Global handler for inline onclick
+window.handleLogin = async function() {
+    console.log('🎯 handleLogin called');
+    const email = document.getElementById('loginEmail')?.value;
+    const password = document.getElementById('loginPassword')?.value;
+    
+    console.log('📧 Email:', email);
+    console.log('🔒 Password length:', password?.length || 0);
+    
+    if (!email || !password) {
+        alert('لطفا ایمیل و رمز عبور را وارد کنید');
+        return;
+    }
+    
+    await debugLogin(email, password);
+};
+
 async function debugLogin(email, password) {
     const debugSection = document.getElementById('debugSection');
     const debugUrl = document.getElementById('debugUrl');
