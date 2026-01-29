@@ -4,6 +4,7 @@ FastAPI application for generating advocacy emails to politicians
 """
 
 import os
+import re
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,6 +38,7 @@ default_origins = [
 env_origins = os.getenv("FRONTEND_URLS") or os.getenv("FRONTEND_URL") or ""
 extra_origins = [o.strip() for o in env_origins.split(",") if o.strip()]
 allow_origins = list(dict.fromkeys(default_origins + extra_origins))
+allow_origin_pattern = re.compile(r"^https://(www\.)?actforiran\.org$")
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,6 +48,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_cors_headers(request, call_next):
+    response = await call_next(request)
+    origin = request.headers.get("origin")
+    if origin and (origin in allow_origins or allow_origin_pattern.match(origin)):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+    return response
 
 # Rate limiting
 app.state.limiter = limiter
