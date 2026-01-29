@@ -328,12 +328,19 @@ function renderCampaigns() {
         return;
     }
     
-    // Filter to show only top 5 hot campaigns
-    const hotCampaigns = state.campaigns
+    // Prefer hot campaigns, fallback to any active campaigns
+    let hotCampaigns = state.campaigns
         .filter(c => c.is_hot && c.is_active)
         .sort((a, b) => a.display_order - b.display_order)
         .slice(0, 5);
-    
+
+    if (hotCampaigns.length === 0) {
+        hotCampaigns = state.campaigns
+            .filter(c => c.is_active)
+            .sort((a, b) => a.display_order - b.display_order)
+            .slice(0, 5);
+    }
+
     if (hotCampaigns.length === 0) {
         return;
     }
@@ -348,8 +355,8 @@ function renderCampaigns() {
                 <div class="campaign-info">
                     <div class="campaign-title">${campaign.title}</div>
                     <div class="campaign-country">
-                        <span>${campaign.country.flag}</span>
-                        <span>${campaign.country.name_persian || campaign.country.name}</span>
+                        <span>${campaign.country?.flag || ''}</span>
+                        <span>${campaign.country?.name_persian || campaign.country?.name || campaign.country_code || ''}</span>
                     </div>
                 </div>
             </div>
@@ -379,7 +386,7 @@ async function selectCampaign(campaignId) {
     state.selectedCampaign = campaign.id;
     
     // Pre-fill selections
-    state.selectedCountry = campaign.country.code;
+    state.selectedCountry = campaign.country?.code || campaign.country_code || '';
     state.selectedRecipients = new Set(campaign.recipient_ids);
     state.selectedTopics = new Set(campaign.topic_ids);
     
@@ -392,7 +399,6 @@ async function selectCampaign(campaignId) {
     await loadTopics();
     
     // Auto-load recipients for the campaign country
-    await loadRecipients(campaign.country.code);
     
     // Jump to step 3 (residency/name step)
     goToStep(3);
@@ -505,8 +511,18 @@ function renderRecipients() {
         elements.recipientsList.innerHTML = '<div class="loading">گیرنده‌ای برای این کشور یافت نشد</div>';
         return;
     }
-    
-    elements.recipientsList.innerHTML = state.recipients.map(recipient => `
+
+    const allSelected = state.selectedRecipients.size === state.recipients.length;
+
+    elements.recipientsList.innerHTML = `
+        <label class="checkbox-item select-all ${allSelected ? 'selected' : ''}" data-id="all">
+            <input type="checkbox" ${allSelected ? 'checked' : ''}>
+            <div class="item-content">
+                <div class="item-title">انتخاب همه گیرندگان</div>
+                <div class="item-subtitle">همه افراد این کشور انتخاب شوند</div>
+            </div>
+        </label>
+        ${state.recipients.map(recipient => `
         <label class="checkbox-item ${state.selectedRecipients.has(recipient.id) ? 'selected' : ''}" data-id="${recipient.id}">
             <input type="checkbox" ${state.selectedRecipients.has(recipient.id) ? 'checked' : ''}>
             <div class="item-content">
@@ -514,18 +530,30 @@ function renderRecipients() {
                 <div class="item-subtitle">${recipient.display_title} — ${recipient.country_name}</div>
             </div>
         </label>
-    `).join('');
+    `).join('')}
+    `;
     
     // Add event listeners
     elements.recipientsList.querySelectorAll('.checkbox-item').forEach(item => {
         item.addEventListener('click', (e) => {
-            const id = parseInt(item.dataset.id);
             const checkbox = item.querySelector('input[type="checkbox"]');
             
             if (e.target !== checkbox) {
                 checkbox.checked = !checkbox.checked;
             }
+
+            if (item.dataset.id === 'all') {
+                if (checkbox.checked) {
+                    state.recipients.forEach(r => state.selectedRecipients.add(r.id));
+                } else {
+                    state.selectedRecipients.clear();
+                }
+                renderRecipients();
+                return;
+            }
             
+            const id = parseInt(item.dataset.id);
+
             if (checkbox.checked) {
                 state.selectedRecipients.add(id);
                 item.classList.add('selected');
@@ -629,4 +657,3 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('❌ Start button not found!');
     }
 });
-

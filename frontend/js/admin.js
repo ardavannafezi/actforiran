@@ -60,6 +60,11 @@ window.handleLogin = async function() {
 
 async function attemptLogin(email, password) {
     const url = `${API_BASE}/api/v1/admin/auth/login`;
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'در حال ورود...';
+    }
 
     try {
         const response = await fetch(url, {
@@ -76,11 +81,16 @@ async function attemptLogin(email, password) {
             showNotification('✅ Login successful', 'success');
             await checkAuth();
         } else {
-            showNotification('❌ Login failed! Check debug info below', 'error');
+            showNotification('❌ Login failed. Check your credentials.', 'error');
         }
     } catch (error) {
         console.error('💥 Error:', error);
-        showNotification('💥 Network error! Check debug info', 'error');
+        showNotification('💥 Network error. Please try again.', 'error');
+    } finally {
+        if (loginBtn) {
+            loginBtn.disabled = false;
+            loginBtn.textContent = loginBtn.dataset.defaultText || 'ورود';
+        }
     }
 }
 
@@ -601,7 +611,7 @@ async function loadCampaigns() {
         if (!response.ok) throw new Error('Failed to load campaigns');
         
         const data = await response.json();
-        campaigns = data.campaigns || [];
+        campaigns = Array.isArray(data) ? data : (data.campaigns || []);
         renderCampaigns();
         
     } catch (error) {
@@ -1152,7 +1162,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Failed to load pending campaigns');
             
             const data = await response.json();
-            const campaigns = data.pending_campaigns || [];
+            const campaigns = Array.isArray(data) ? data : (data.pending_campaigns || []);
             
             if (campaigns.length === 0) {
                 container.innerHTML = '<div class="no-data">کمپینی در انتظار تایید نیست</div>';
@@ -1186,7 +1196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const token = sessionStorage.getItem('adminToken');
         
         try {
-            const response = await fetch(`${API_BASE}/admin/campaigns/${id}/approve`, {
+            const response = await fetch(`${API_BASE}/api/v1/admin/campaigns/${id}/approve`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -1207,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const token = sessionStorage.getItem('adminToken');
         
         try {
-            const response = await fetch(`${API_BASE}/admin/campaigns/${id}/reject`, {
+            const response = await fetch(`${API_BASE}/api/v1/admin/campaigns/${id}/reject`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1311,7 +1321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const token = sessionStorage.getItem('adminToken');
         try {
-            const response = await fetch(`${API_BASE}/admin/analytics`, {
+        const response = await fetch(`${API_BASE}/api/v1/admin/analytics`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
