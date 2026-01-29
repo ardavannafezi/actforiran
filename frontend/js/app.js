@@ -18,7 +18,7 @@ const state = {
     selectedCountry: null,
     selectedRecipients: new Set(),
     selectedTopics: new Set(),
-    isResident: null,
+    citizenshipStatus: null,
     selectedCampaign: null,
     campaignMode: false, // Track if user started from campaign
     generatedEmail: {
@@ -41,7 +41,9 @@ const elements = {
     userName: document.getElementById('userName'),
     emailSubject: document.getElementById('emailSubject'),
     emailBody: document.getElementById('emailBody'),
-    sendEmailBtn: document.getElementById('sendEmailBtn')
+    sendEmailBtn: document.getElementById('sendEmailBtn'),
+    selectedCountryLabel: document.getElementById('selectedCountryLabel'),
+    selectedCountryInline: document.getElementById('selectedCountryInline')
 };
 
 // ============================================
@@ -141,10 +143,10 @@ function initStepper() {
         elements.countrySelect.onchange = handleCountryChange;
     }
     
-    // Residency radio buttons
-    document.querySelectorAll('input[name=\"resident\"]').forEach(radio => {
+    // Citizenship status radio buttons
+    document.querySelectorAll('input[name=\"citizenship_status\"]').forEach(radio => {
         radio.onclick = function(e) {
-            state.isResident = e.target.value === 'yes';
+            state.citizenshipStatus = e.target.value;
         };
     });
     
@@ -223,8 +225,8 @@ function validateCurrentStep() {
             }
             break;
         case 3:
-            if (state.isResident === null) {
-                showNotification('لطفاً وضعیت اقامت خود را مشخص کنید', 'error');
+            if (!state.citizenshipStatus) {
+                showNotification('لطفاً وضعیت شهروندی خود را مشخص کنید', 'error');
                 return false;
             }
             break;
@@ -251,6 +253,10 @@ async function loadCountries() {
         
         elements.countrySelect.innerHTML = '<option value="">یک کشور انتخاب کنید...</option>' +
             state.countries.map(c => `<option value="${c.code}">${c.flag || ''} ${c.name_persian || c.name}</option>`).join('');
+
+        if (state.selectedCountry) {
+            updateSelectedCountryLabels(state.selectedCountry);
+        }
         
     } catch (error) {
         console.error('Error loading countries:', error);
@@ -263,11 +269,13 @@ async function handleCountryChange(e) {
     const countryCode = e.target.value;
     if (!countryCode) {
         state.selectedCountry = null;
+        updateSelectedCountryLabels(null);
         return;
     }
     
     state.selectedCountry = countryCode;
     state.selectedRecipients.clear();
+    updateSelectedCountryLabels(countryCode);
     
     try {
         elements.recipientsList.innerHTML = '<div class="loading">در حال بارگذاری گیرندگان...</div>';
@@ -284,6 +292,18 @@ async function handleCountryChange(e) {
         console.error('Error loading recipients:', error);
         showNotification('خطا در بارگذاری گیرندگان', 'error');
         elements.recipientsList.innerHTML = '<div class="loading">خطا در بارگذاری</div>';
+    }
+}
+
+function updateSelectedCountryLabels(countryCode) {
+    const country = state.countries.find(c => c.code === countryCode);
+    const countryName = country?.name_persian || country?.name || 'این کشور';
+
+    if (elements.selectedCountryLabel) {
+        elements.selectedCountryLabel.textContent = countryName;
+    }
+    if (elements.selectedCountryInline) {
+        elements.selectedCountryInline.textContent = countryName;
     }
 }
 
@@ -425,7 +445,7 @@ async function generateEmail() {
         country_code: state.selectedCountry,
         recipient_ids: Array.from(state.selectedRecipients),
         topic_ids: Array.from(state.selectedTopics),
-        is_resident: state.isResident,
+        sender_citizenship_status: state.citizenshipStatus,
         user_name: userName || null,
         campaign_id: state.selectedCampaign || null
     };

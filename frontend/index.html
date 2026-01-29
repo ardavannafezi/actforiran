@@ -116,7 +116,7 @@
                     </div>
                     <div class="step-indicator" data-step="3">
                         <span class="step-number">۳</span>
-                        <span class="step-label">اقامت</span>
+                        <span class="step-label">شهروندی</span>
                     </div>
                     <div class="step-indicator" data-step="4">
                         <span class="step-number">۴</span>
@@ -150,10 +150,10 @@
                         </div>
                     </div>
 
-                    <!-- Step 3: Residency Status -->
+                    <!-- Step 3: Citizenship Status -->
                     <div class="step-panel" data-step="3">
                         <h2>اطلاعات شما</h2>
-                        <p>نام شما (اختیاری) و وضعیت اقامت</p>
+                        <p>نام شما (اختیاری) و وضعیت شهروندی</p>
                         
                         <div class="form-group" style="margin-bottom: 24px;">
                             <label>نام شما (اختیاری)</label>
@@ -161,21 +161,30 @@
                             <small style="color: var(--text-secondary); font-size: 13px;">لطفا فقط به انگلیسی وارد کنید. نام شما در امضای ایمیل ظاهر می‌شود.</small>
                         </div>
                         
-                        <label style="display: block; margin-bottom: 12px; font-weight: 600;">وضعیت اقامت</label>
-                        <p style="margin-bottom: 16px; color: var(--text-secondary); font-size: 14px;">آیا در کشور انتخاب شده اقامت دارید؟</p>
+                        <label style="display: block; margin-bottom: 12px; font-weight: 600;">وضعیت شهروندی</label>
+                        <p style="margin-bottom: 16px; color: var(--text-secondary); font-size: 14px;">
+                            لطفاً وضعیت شهروندی خود را نسبت به <span id="selectedCountryLabel">این کشور</span> مشخص کنید
+                        </p>
                         <div class="radio-group">
                             <label class="radio-card">
-                                <input type="radio" name="resident" value="yes">
+                                <input type="radio" name="citizenship_status" value="international_supporter">
                                 <div class="radio-content">
-                                    <span class="radio-icon">🏠</span>
-                                    <span class="radio-label">بله، ساکن این کشور هستم</span>
+                                    <span class="radio-icon">🌍</span>
+                                    <span class="radio-label">حامی بین‌المللی هستم</span>
                                 </div>
                             </label>
                             <label class="radio-card">
-                                <input type="radio" name="resident" value="no">
+                                <input type="radio" name="citizenship_status" value="iranian_citizen">
                                 <div class="radio-content">
-                                    <span class="radio-icon">🌍</span>
-                                    <span class="radio-label">خیر، در کشور دیگری هستم</span>
+                                    <span class="radio-icon">🇮🇷</span>
+                                    <span class="radio-label">شهروند ایران هستم</span>
+                                </div>
+                            </label>
+                            <label class="radio-card">
+                                <input type="radio" name="citizenship_status" value="selected_country_citizen">
+                                <div class="radio-content">
+                                    <span class="radio-icon">🏛️</span>
+                                    <span class="radio-label">شهروند/مقیم <span id="selectedCountryInline">این کشور</span> هستم</span>
                                 </div>
                             </label>
                         </div>

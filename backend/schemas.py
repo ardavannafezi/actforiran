@@ -41,7 +41,8 @@ class GenerateEmailRequest(BaseModel):
     country_code: str = Field(..., min_length=3, max_length=3)
     recipient_ids: List[int] = Field(..., min_length=1)
     topic_ids: List[int] = Field(..., min_length=1)
-    is_resident: bool
+    sender_citizenship_status: str
+    is_resident: Optional[bool] = None
     user_name: Optional[str] = None
     campaign_id: Optional[int] = None  # Track which campaign was used
 

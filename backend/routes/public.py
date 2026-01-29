@@ -214,7 +214,14 @@ async def generate_email_endpoint(
         )
 
     topics_payload = [
-        {"id": t.id, "display_title": t.display_title, "description": t.description or ""} for t in topics
+        {
+            "id": t.id,
+            "display_title": t.display_title,
+            "description": t.description or "",
+            "requested_action": "",
+            "sources": [],
+        }
+        for t in topics
     ]
 
     subject = ""
@@ -222,13 +229,19 @@ async def generate_email_endpoint(
     token_usage = 0
     error_message = None
     success = True
+    sender_citizenship_status = payload.sender_citizenship_status
+    if not sender_citizenship_status and payload.is_resident is not None:
+        sender_citizenship_status = "selected_country_citizen" if payload.is_resident else "international_supporter"
+
+    if sender_citizenship_status not in ["international_supporter", "iranian_citizen", "selected_country_citizen"]:
+        raise HTTPException(status_code=400, detail="Invalid sender citizenship status")
 
     try:
         subject, body, token_usage = await generate_email(
             country_name=country.name,
             recipients=recipients_payload,
             topics=topics_payload,
-            is_resident=payload.is_resident,
+            sender_citizenship_status=sender_citizenship_status,
             user_name=payload.user_name,
         )
     except AIServiceError as exc:
@@ -236,13 +249,15 @@ async def generate_email_endpoint(
         error_message = str(exc)
         raise HTTPException(status_code=502, detail="AI service failed to generate email") from exc
     finally:
+        is_country_resident = sender_citizenship_status == "selected_country_citizen"
         log_entry = EmailGenerationLog(
             campaign_id=payload.campaign_id,
             sender_ip_address=request.client.host if request.client else None,
             sender_country_code=None,
             sender_country_name=None,
             sender_user_name=payload.user_name,
-            is_country_resident=payload.is_resident,
+            sender_citizenship_status=sender_citizenship_status,
+            is_country_resident=is_country_resident,
             selected_recipient_country=country.name,
             recipient_ids=payload.recipient_ids,
             topic_ids=payload.topic_ids,

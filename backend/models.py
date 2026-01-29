@@ -127,6 +127,7 @@ class EmailGenerationLog(Base):
     sender_country_code = Column(String(3), nullable=True)
     sender_country_name = Column(String(100), nullable=True)
     sender_user_name = Column(String(255), nullable=True)  # Track user name
+    sender_citizenship_status = Column(String(50), nullable=True)
     is_country_resident = Column(Boolean, nullable=True)
     selected_recipient_country = Column(String(100), nullable=True)
     recipient_ids = Column(ARRAY(Integer), nullable=True)

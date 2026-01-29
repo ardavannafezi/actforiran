@@ -426,6 +426,17 @@ def run_migrations(db: Session):
             print("   ➕ Need to add sender_user_name to email_generation_logs")
     except Exception as e:
         print(f"   ⚠️  Could not check email_generation_logs.sender_user_name: {e}")
+
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='email_generation_logs' AND column_name='sender_citizenship_status'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE email_generation_logs ADD COLUMN sender_citizenship_status VARCHAR(50)")
+            print("   ➕ Need to add sender_citizenship_status to email_generation_logs")
+    except Exception as e:
+        print(f"   ⚠️  Could not check email_generation_logs.sender_citizenship_status: {e}")
     
     # Run migrations
     if migrations:

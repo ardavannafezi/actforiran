@@ -1127,6 +1127,7 @@ async def get_recent_activity(
                 "id": log.id,
                 "country": log.selected_recipient_country,
                 "is_resident": log.is_country_resident,
+                "citizenship_status": log.sender_citizenship_status,
                 "success": log.generation_successful,
                 "created_at": log.created_at.isoformat() if log.created_at else None,
                 "error": log.error_message

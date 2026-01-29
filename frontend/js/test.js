@@ -164,7 +164,7 @@ async function testGenerateEmail() {
             country_code: country.code,
             recipient_ids: [recipient.id],
             topic_ids: [topic.id],
-            is_resident: false
+            sender_citizenship_status: "international_supporter"
         };
         
         const success = await testEndpoint('generate-email', '/api/v1/generate-email', {

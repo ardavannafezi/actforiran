@@ -1,5 +1,4 @@
 import os
-import re
 from typing import List, Tuple
 
 import httpx
@@ -15,63 +14,51 @@ class AIServiceError(Exception):
 
 def _build_prompt(
     country_name: str,
-    residency_status: str,
+    sender_citizenship_status: str,
     topic_lines: List[str],
     recipient_lines: List[str],
     user_name: str = None,
 ) -> Tuple[str, str]:
     
-    sender_intro = f"from {user_name}" if user_name else "from a concerned individual"
-    
     system_prompt = (
-        "You are an expert at writing compelling, authentic advocacy emails in English. "
-        "Your emails sound genuinely human — passionate but professional, urgent but respectful.\n\n"
-        "CRITICAL REQUIREMENTS:\n"
-        "- Write ONLY in English (never Farsi/Persian)\n"
-        "- Make it sound authentic and personal, not template-like\n"
-        "- Vary sentence structure and word choice\n"
-        "- Use emotional appeal while maintaining credibility\n"
-        "- Include specific details about Iran's human rights crisis\n"
-        "- Reference current events (2026 protests, Woman Life Freedom movement)\n\n"
-        "TONE: Urgent, compassionate, informed citizen\n"
-        "LENGTH: 250-350 words\n"
-        "STYLE: Personal letter to official (not a formal petition)"
+        "You are an email drafting assistant for contacting politicians or public officials.\n"
+        "Your job is to produce one English email that first presents the information clearly, then asks for specific actions.\n"
+        "Rules you must follow:\n\n"
+        "Use only the provided variables. Do not invent recipients, sender details, events, claims, or actions.\n"
+        "The email must clearly show the information first, then ask for the requested action(s).\n"
+        "If any topic includes news or current events, you must use updated information and cite reputable sources provided in the variables. If sources are not provided, do not add news claims.\n"
+        "Do not mention “zan zendegi azadi” or “women life freedom” unless those exact phrases appear in the topic text.\n"
+        "Output must be English only.\n"
+        "Keep it professional and clear.\n"
+        "Output format:\n"
+        "Subject line\n"
+        "Greeting addressing the receiver\n"
+        "Sender identification (name and citizenship status)\n"
+        "Information section (topics, key info, and citations if provided)\n"
+        "Action request section (specific actions, numbered)\n"
+        "Closing with sender name"
     )
-
-    citizenship_context = "I am a resident and voter in your country" if residency_status == "Resident" else "I am an international observer deeply concerned about this issue"
     
     user_prompt = (
-        f"Write a personal advocacy email {sender_intro} to officials in {country_name} "
-        "about Iran's human rights crisis.\n\n"
-        f"Sender context: {citizenship_context}\n\n"
-        "Key topics to address:\n"
-        f"{chr(10).join(topic_lines)}\n\n"
-        "Recipients:\n"
+        "Receivers:\n"
         f"{chr(10).join(recipient_lines)}\n\n"
-        "REQUIREMENTS:\n"
-        "1. Start with a personal greeting\n"
-        "2. Explain why you're writing (personal connection to issue)\n"
-        "3. Present 2-3 specific human rights violations from the topics\n"
-        "4. Include emotional but factual appeals\n"
-        "5. Make 2-3 concrete action requests\n"
-        "6. Close with urgency but respect\n"
-        f"7. Sign as '{user_name if user_name else 'A Concerned Citizen'}'\n\n"
-        "Output format:\n"
-        "SUBJECT: [compelling subject under 60 chars]\n\n"
-        "BODY:\n"
-        "[email body in English — sound human, vary language, be specific]"
+        "Sender name:\n"
+        f"{user_name or ''}\n\n"
+        "Sender citizenship status:\n"
+        f"{sender_citizenship_status}\n\n"
+        "Topics (include information and requested actions):\n"
+        f"{chr(10).join(topic_lines)}\n\n"
+        "Write one email in English that:\n\n"
+        "Clearly presents the information first (by topic), using only the provided topic_information and sources.\n"
+        "Then asks for the requested_action for each topic, as a numbered list.\n"
+        "Includes citations only from the provided sources when mentioned.\n"
+        "Does not mention “zan zendegi azadi” or “women life freedom” unless the exact phrase is in a topic_title or topic_information."
     )
 
     return system_prompt, user_prompt
 
 
 def _parse_subject_body(text: str) -> Tuple[str, str]:
-    match = re.search(r"(?is)subject:\s*(.*?)\n\s*body:\s*(.*)", text)
-    if match:
-        subject = match.group(1).strip().strip('"')
-        body = match.group(2).strip()
-        return subject, body
-
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if not lines:
         return "Urgent: Action Needed on Iran Human Rights Crisis", ""
@@ -85,20 +72,39 @@ async def generate_email(
     country_name: str,
     recipients: List[dict],
     topics: List[dict],
-    is_resident: bool,
+    sender_citizenship_status: str,
     user_name: str = None,
 ) -> Tuple[str, str, int]:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise AIServiceError("OPENAI_API_KEY is not configured")
 
-    residency_status = "Resident" if is_resident else "International Supporter"
-    topic_lines = [f"- {t['display_title']}: {t.get('description') or 'Critical human rights concern'}" for t in topics]
-    recipient_lines = [f"- {r['full_name']} ({r['display_title']})" for r in recipients]
+    topic_lines = [
+        (
+            "{"
+            f"topic_title: {t['display_title']}, "
+            f"topic_information: {t.get('description') or ''}, "
+            f"requested_action: {t.get('requested_action') or ''}, "
+            f"sources: {t.get('sources') or []}"
+            "}"
+        )
+        for t in topics
+    ]
+    recipient_lines = [
+        (
+            "{"
+            f"name: {r['full_name']}, "
+            f"role_or_office: {r['display_title']}, "
+            f"country: {country_name}, "
+            f"email: {r['email_address']}"
+            "}"
+        )
+        for r in recipients
+    ]
 
     system_prompt, user_prompt = _build_prompt(
         country_name=country_name,
-        residency_status=residency_status,
+        sender_citizenship_status=sender_citizenship_status,
         topic_lines=topic_lines,
         recipient_lines=recipient_lines,
         user_name=user_name,
