@@ -17,6 +17,7 @@ let adminData = null;
 let countries = [];
 let roles = [];
 let recipientsAdmin = [];
+let campaignChart, countryChart, userCountryChart;
 
 // DOM Elements (will be set in DOMContentLoaded)
 let loginContainer;
@@ -1291,133 +1292,140 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification(error.message, 'error');
         }
     };
+});
 
-    // ==================== CHARTS ====================
+// ==================== CHARTS ====================
+
+window.renderCharts = function(analytics) {
+    console.log('📈 Rendering charts with data:', analytics);
     
-    let campaignChart, countryChart, userCountryChart;
-    
-    window.renderCharts = function(analytics) {
-        // Campaign Distribution Chart
-        const campaignCtx = document.getElementById('campaignChart');
-        if (campaignCtx && analytics.campaign_analytics) {
-            if (campaignChart) campaignChart.destroy();
-            
-            const campaigns = analytics.campaign_analytics.slice(0, 10);
-            campaignChart = new Chart(campaignCtx, {
-                type: 'bar',
-                data: {
-                    labels: campaigns.map(c => c.campaign_title),
-                    datasets: [{
-                        label: 'تعداد ایمیل',
-                        data: campaigns.map(c => c.email_count),
-                        backgroundColor: 'rgba(99, 102, 241, 0.8)',
-                        borderColor: 'rgb(99, 102, 241)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-        }
+    // Campaign Distribution Chart
+    const campaignCtx = document.getElementById('campaignChart');
+    if (campaignCtx && analytics.campaign_analytics) {
+        if (campaignChart) campaignChart.destroy();
         
-        // Country Distribution Chart
-        const countryCtx = document.getElementById('countryChart');
-        if (countryCtx && analytics.top_countries) {
-            if (countryChart) countryChart.destroy();
-            
-            const countries = analytics.top_countries.slice(0, 10);
-            countryChart = new Chart(countryCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: countries.map(c => c.country),
-                    datasets: [{
-                        data: countries.map(c => c.email_count),
-                        backgroundColor: [
-                            'rgba(99, 102, 241, 0.8)',
-                            'rgba(236, 72, 153, 0.8)',
-                            'rgba(34, 197, 94, 0.8)',
-                            'rgba(251, 191, 36, 0.8)',
-                            'rgba(239, 68, 68, 0.8)',
-                            'rgba(168, 85, 247, 0.8)',
-                            'rgba(59, 130, 246, 0.8)',
-                            'rgba(14, 165, 233, 0.8)',
-                            'rgba(251, 146, 60, 0.8)',
-                            'rgba(132, 204, 22, 0.8)'
-                        ]
-                    }]
+        const campaigns = analytics.campaign_analytics.slice(0, 10);
+        campaignChart = new Chart(campaignCtx, {
+            type: 'bar',
+            data: {
+                labels: campaigns.map(c => c.campaign_title),
+                datasets: [{
+                    label: 'تعداد ایمیل',
+                    data: campaigns.map(c => c.email_count),
+                    backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                    borderColor: 'rgb(99, 102, 241)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                font: { size: 11 }
-                            }
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+    
+    // Country Distribution Chart
+    const countryCtx = document.getElementById('countryChart');
+    if (countryCtx && analytics.top_countries) {
+        if (countryChart) countryChart.destroy();
+        
+        const countries = analytics.top_countries.slice(0, 10);
+        countryChart = new Chart(countryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: countries.map(c => c.country),
+                datasets: [{
+                    data: countries.map(c => c.email_count),
+                    backgroundColor: [
+                        'rgba(99, 102, 241, 0.8)',
+                        'rgba(236, 72, 153, 0.8)',
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(251, 191, 36, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(168, 85, 247, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(14, 165, 233, 0.8)',
+                        'rgba(251, 146, 60, 0.8)',
+                        'rgba(132, 204, 22, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: { size: 11 }
                         }
                     }
                 }
-            });
-        }
+            }
+        });
+    }
 
-        // User Countries Chart
-        const userCountryCtx = document.getElementById('userCountryChart');
-        if (userCountryCtx && analytics.user_countries) {
-            if (userCountryChart) userCountryChart.destroy();
+    // User Countries Chart
+    const userCountryCtx = document.getElementById('userCountryChart');
+    if (userCountryCtx && analytics.user_countries) {
+        if (userCountryChart) userCountryChart.destroy();
 
-            const users = analytics.user_countries.slice(0, 10);
-            userCountryChart = new Chart(userCountryCtx, {
-                type: 'bar',
-                data: {
-                    labels: users.map(u => u.country),
-                    datasets: [{
-                        label: 'کاربر',
-                        data: users.map(u => u.user_count),
-                        backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                        borderColor: 'rgb(34, 197, 94)',
-                        borderWidth: 1
-                    }]
+        const users = analytics.user_countries.slice(0, 10);
+        userCountryChart = new Chart(userCountryCtx, {
+            type: 'bar',
+            data: {
+                labels: users.map(u => u.country),
+                datasets: [{
+                    label: 'کاربر',
+                    data: users.map(u => u.user_count),
+                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                    borderColor: 'rgb(34, 197, 94)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
+                scales: {
+                    y: { beginAtZero: true }
                 }
-            });
-        }
-    };
+            }
+        });
+    }
+};
 
-    // Load analytics and render charts
-    window.loadAnalytics = async function() {
-        await loadCampaignAnalytics();
+// ==================== ANALYTICS LOADING ====================
+// Load analytics and render charts (defined globally)
+window.loadAnalytics = async function() {
+    console.log('📊 Loading analytics...');
+    await loadCampaignAnalytics();
+    
+    const token = sessionStorage.getItem('adminToken');
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/admin/analytics`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         
-        const token = sessionStorage.getItem('adminToken');
-        try {
-            const response = await fetch(`${API_BASE}/api/v1/admin/analytics`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (response.ok) {
-                const analytics = await response.json();
+        if (response.ok) {
+            const analytics = await response.json();
+            console.log('📊 Analytics data received:', analytics);
+            if (typeof renderCharts === 'function') {
                 renderCharts(analytics);
             }
-        } catch (error) {
-            console.error('Failed to load analytics for charts:', error);
+        } else {
+            console.error('Failed to fetch analytics:', response.status);
         }
-    };
-});
+    } catch (error) {
+        console.error('Failed to load analytics for charts:', error);
+    }
+};
