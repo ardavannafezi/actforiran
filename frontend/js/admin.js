@@ -50,66 +50,58 @@ window.handleLogin = async function() {
     console.log('🎯 handleLogin called');
     const email = document.getElementById('loginEmail')?.value;
     const password = document.getElementById('loginPassword')?.value;
-    
+
     console.log('📧 Email:', email);
     console.log('🔒 Password length:', password?.length || 0);
-    
+
     if (!email || !password) {
         alert('لطفا ایمیل و رمز عبور را وارد کنید');
         return;
     }
-    
-    await debugLogin(email, password);
+
+    await attemptLogin(email, password);
 };
 
-async function debugLogin(email, password) {
+function updateDebug(statusText, statusOk, responseData) {
     const debugSection = document.getElementById('debugSection');
     const debugUrl = document.getElementById('debugUrl');
     const debugStatus = document.getElementById('debugStatus');
     const debugResponse = document.getElementById('debugResponse');
-    
     const url = `${API_BASE}/api/v1/admin/auth/login`;
-    
-    console.log('🐛 DEBUG MODE: Testing login API');
-    console.log('📧 Email:', email);
-    console.log('🔗 URL:', url);
-    
+
     debugSection.style.display = 'block';
     debugUrl.textContent = url;
-    debugStatus.textContent = 'Loading...';
-    debugStatus.style.color = '#fbbf24';
-    debugResponse.textContent = 'Sending request...';
-    
+    debugStatus.textContent = statusText;
+    debugStatus.style.color = statusOk ? '#4ade80' : '#ef4444';
+    debugResponse.textContent = responseData;
+}
+
+async function attemptLogin(email, password) {
+    console.log('🐛 Login request');
+    const url = `${API_BASE}/api/v1/admin/auth/login`;
+    updateDebug('Loading...', false, 'Sending request...');
+
     try {
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
         });
-        
+
         const responseData = await response.json();
-        
-        // Display status
-        debugStatus.textContent = `${response.status} ${response.statusText}`;
-        debugStatus.style.color = response.ok ? '#4ade80' : '#ef4444';
-        
-        // Display response
-        debugResponse.textContent = JSON.stringify(responseData, null, 2);
-        
-        console.log('📡 Response Status:', response.status);
-        console.log('📦 Response Data:', responseData);
-        
+        updateDebug(`${response.status} ${response.statusText}`, response.ok, JSON.stringify(responseData, null, 2));
+
         if (response.ok) {
-            showNotification('✅ Login successful! Check debug info below', 'success');
+            token = responseData.access_token;
+            sessionStorage.setItem('adminToken', token);
+            showNotification('✅ Login successful', 'success');
+            await checkAuth();
         } else {
             showNotification('❌ Login failed! Check debug info below', 'error');
         }
-        
     } catch (error) {
         console.error('💥 Error:', error);
-        debugStatus.textContent = 'ERROR';
-        debugStatus.style.color = '#ef4444';
-        debugResponse.textContent = `Error: ${error.message}\n\nStack: ${error.stack}`;
+        updateDebug('ERROR', false, `Error: ${error.message}\n\nStack: ${error.stack}`);
         showNotification('💥 Network error! Check debug info', 'error');
     }
 }
@@ -588,8 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // DEBUG MODE: Show API response instead of logging in
-            await debugLogin(email, password);
+            await attemptLogin(email, password);
         });
     } else {
         console.error('❌ Login button not found');
