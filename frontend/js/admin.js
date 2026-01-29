@@ -17,11 +17,11 @@ let adminData = null;
 let countries = [];
 let roles = [];
 
-// DOM Elements
-const loginContainer = document.getElementById('loginContainer');
-const adminLayout = document.getElementById('adminLayout');
-const loginForm = document.getElementById('loginForm');
-const logoutBtn = document.getElementById('logoutBtn');
+// DOM Elements (will be set in DOMContentLoaded)
+let loginContainer;
+let adminLayout;
+let loginForm;
+let logoutBtn;
 
 // ============================================
 // NOTIFICATION SYSTEM
@@ -562,6 +562,12 @@ function toPersian(num) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🔐 Admin Panel Loaded');
     console.log('📡 API Base:', API_BASE);
+    
+    // Set DOM elements
+    loginContainer = document.getElementById('loginContainer');
+    adminLayout = document.getElementById('adminLayout');
+    loginForm = document.getElementById('loginForm');
+    logoutBtn = document.getElementById('logoutBtn');
     
     // Setup event listeners
     const loginFormElement = document.getElementById('loginForm');
