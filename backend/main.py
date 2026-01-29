@@ -38,25 +38,17 @@ default_origins = [
 env_origins = os.getenv("FRONTEND_URLS") or os.getenv("FRONTEND_URL") or ""
 extra_origins = [o.strip() for o in env_origins.split(",") if o.strip()]
 allow_origins = list(dict.fromkeys(default_origins + extra_origins))
-allow_origin_pattern = re.compile(r"^https://(www\.)?actforiran\.org$")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    allow_origin_regex=r"https://(www\.)?actforiran\.org",
-    allow_credentials=False,
-    allow_methods=["*"],
+    allow_origin_regex=r"^https://(www\.)?actforiran\.org$",
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
-
-@app.middleware("http")
-async def add_cors_headers(request, call_next):
-    response = await call_next(request)
-    origin = request.headers.get("origin")
-    if origin and (origin in allow_origins or allow_origin_pattern.match(origin)):
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Vary"] = "Origin"
-    return response
 
 # Rate limiting
 app.state.limiter = limiter
