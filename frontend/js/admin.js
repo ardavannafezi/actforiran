@@ -167,6 +167,16 @@ function showDashboard() {
     
     if (adminData) {
         document.getElementById('adminEmail').textContent = adminData.email;
+        
+        // Hide admins tab for non-super-admins
+        const adminsTab = document.querySelector('[data-tab="admins"]');
+        if (adminsTab) {
+            if (adminData.role === 'super_admin') {
+                adminsTab.style.display = 'block';
+            } else {
+                adminsTab.style.display = 'none';
+            }
+        }
     }
     
     loadDashboardData();
@@ -917,14 +927,18 @@ async function loadCampaignAnalytics() {
         // Update overview stats
         document.getElementById('analyticsTotal').textContent = toPersian(overview.total_emails || overview.total_emails_generated || 0);
         document.getElementById('analyticsSuccess').textContent = overview.success_rate || '0%';
+        document.getElementById('analyticsUnique').textContent = toPersian(overview.unique_users || 0);
+        document.getElementById('analyticsCampaigns').textContent = toPersian(overview.active_campaigns || 0);
         
-        // Render campaign analytics
+        // Render campaign analytics with enhanced styling
         const list = document.getElementById('campaignAnalyticsList');
         if (list && campaignStats.campaign_analytics) {
-            list.innerHTML = campaignStats.campaign_analytics.map(ca => `
-                <div class="stat-card" style="margin-bottom: 12px;">
-                    <div class="stat-label">${ca.campaign_title}</div>
-                    <div class="stat-value">${toPersian(ca.email_count)} ایمیل</div>
+            list.innerHTML = campaignStats.campaign_analytics.map((ca, index) => `
+                <div class="stat-card" style="margin-bottom: 12px; border-left: 4px solid hsl(${index * 30}, 70%, 60%); background: linear-gradient(90deg, hsla(${index * 30}, 70%, 60%, 0.1) 0%, transparent 100%);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="stat-label" style="font-weight: 500;">${ca.campaign_title}</div>
+                        <div class="stat-value" style="font-size: 1.2rem; color: hsl(${index * 30}, 70%, 50%);">${toPersian(ca.email_count)}</div>
+                    </div>
                 </div>
             `).join('');
         }
@@ -938,8 +952,8 @@ async function loadCampaignAnalytics() {
         if (topCountriesList && topCountries.top_countries) {
             topCountriesList.innerHTML = topCountries.top_countries.slice(0, 10).map(tc => `
                 <tr>
-                    <td>${tc.country}</td>
-                    <td>${toPersian(tc.email_count)}</td>
+                    <td style="font-weight: 500;">${tc.country}</td>
+                    <td><span style="background: linear-gradient(90deg, var(--primary-color), transparent); padding: 4px 12px; border-radius: 6px; color: white; font-weight: 600;">${toPersian(tc.email_count)}</span></td>
                 </tr>
             `).join('');
         }

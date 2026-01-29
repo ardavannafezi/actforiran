@@ -391,47 +391,72 @@
 
         <!-- Analytics Tab Content (add before closing main) -->
         <div class="tab-content" id="analyticsTab" style="display: none;">
-            <h2>آمار و تحلیل</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2>📊 آمار و تحلیل</h2>
+            </div>
             
             <div class="stats-grid" style="margin-top: 24px;">
-                <div class="stat-card">
-                    <div class="stat-value" id="analyticsTotal">-</div>
-                    <div class="stat-label">کل ایمیل‌ها</div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="stat-value" id="analyticsTotal" style="color: white;">-</div>
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">کل ایمیل‌ها</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="analyticsSuccess">-</div>
-                    <div class="stat-label">نرخ موفقیت</div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                    <div class="stat-value" id="analyticsSuccess" style="color: white;">-</div>
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">نرخ موفقیت</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                    <div class="stat-value" id="analyticsUnique" style="color: white;">-</div>
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">کاربران منحصر به فرد</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                    <div class="stat-value" id="analyticsCampaigns" style="color: white;">-</div>
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">کمپین‌های فعال</div>
                 </div>
             </div>
             
-            <h3 style="margin: 32px 0 16px;">محبوب‌ترین کمپین‌ها</h3>
-            <div id="campaignAnalyticsList"></div>
-            
-            <h3 style="margin: 32px 0 16px;">کشورهای برتر</h3>
-            <div class="data-table-wrapper">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>کشور</th>
-                            <th>تعداد ایمیل</th>
-                        </tr>
-                    </thead>
-                    <tbody id="topCountriesList"></tbody>
-                </table>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px;">
+                <div style="background: var(--card-bg); padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
+                        <span>🔥</span>
+                        <span>محبوب‌ترین کمپین‌ها</span>
+                    </h3>
+                    <div id="campaignAnalyticsList"></div>
+                </div>
+                
+                <div style="background: var(--card-bg); padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
+                        <span>🌍</span>
+                        <span>کشورهای برتر</span>
+                    </h3>
+                    <div class="data-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>کشور</th>
+                                    <th>تعداد ایمیل</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topCountriesList"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
-            <h3 style="margin: 32px 0 16px;">نمودارهای تحلیلی</h3>
+            <h3 style="margin: 32px 0 16px; display: flex; align-items: center; gap: 8px;">
+                <span>📈</span>
+                <span>نمودارهای تحلیلی</span>
+            </h3>
             <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-top: 24px;">
-                <div class="chart-container" style="background: var(--card-bg); padding: 20px; border-radius: 12px;">
-                    <h4 style="margin-bottom: 16px;">توزیع کمپین‌ها</h4>
+                <div class="chart-container" style="background: var(--card-bg); padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h4 style="margin-bottom: 16px; color: var(--primary-color); font-weight: 600;">📊 توزیع کمپین‌ها</h4>
                     <canvas id="campaignChart"></canvas>
                 </div>
-                <div class="chart-container" style="background: var(--card-bg); padding: 20px; border-radius: 12px;">
-                    <h4 style="margin-bottom: 16px;">کشورهای برتر</h4>
+                <div class="chart-container" style="background: var(--card-bg); padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h4 style="margin-bottom: 16px; color: var(--primary-color); font-weight: 600;">🍩 کشورهای برتر</h4>
                     <canvas id="countryChart"></canvas>
                 </div>
-                <div class="chart-container" style="background: var(--card-bg); padding: 20px; border-radius: 12px;">
-                    <h4 style="margin-bottom: 16px;">کاربران بر اساس کشور</h4>
+                <div class="chart-container" style="background: var(--card-bg); padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h4 style="margin-bottom: 16px; color: var(--primary-color); font-weight: 600;">👥 کاربران بر اساس کشور</h4>
                     <canvas id="userCountryChart"></canvas>
                 </div>
             </div>

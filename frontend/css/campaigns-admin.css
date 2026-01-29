@@ -11,6 +11,12 @@
     border-radius: var(--radius-lg);
     padding: 20px;
     position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.campaign-admin-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .campaign-admin-card.is-hot {
@@ -23,6 +29,12 @@
     top: 12px;
     left: 12px;
     font-size: 20px;
+    animation: flame 1.5s infinite alternate;
+}
+
+@keyframes flame {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.1); }
 }
 
 .campaign-admin-header {
