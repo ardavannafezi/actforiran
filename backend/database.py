@@ -96,15 +96,20 @@ def seed_defaults(db):
             [{"code": c["code"], "name": c["name"], "name_persian": c.get("name_persian", c["name"]), "flag": c["flag"], "is_active": True} for c in TOP_COUNTRIES],
         )
 
-    # Seed roles
-    if db.query(RecipientRole).count() == 0:
-        db.bulk_insert_mappings(
-            RecipientRole,
-            [
-                {"name": role, "is_active": True, "is_system_default": True, "created_by_admin_id": super_admin.id}
-                for role in DEFAULT_RECIPIENT_ROLES
-            ],
-        )
+    # Seed roles (insert any missing defaults)
+    existing_roles = {r.name for r in db.query(RecipientRole).all()}
+    missing_roles = [
+        {
+            "name": role,
+            "is_active": True,
+            "is_system_default": True,
+            "created_by_admin_id": super_admin.id,
+        }
+        for role in DEFAULT_RECIPIENT_ROLES
+        if role not in existing_roles
+    ]
+    if missing_roles:
+        db.bulk_insert_mappings(RecipientRole, missing_roles)
 
     db.commit()
     
@@ -142,15 +147,16 @@ def seed_defaults(db):
         {"full_name": "Penny Wong", "email_address": "penny.wong@dfat.gov.au", "role_id": fm_role.id, "country_code": "AUS"}
     ]
     
-    for recipient_data in recipients_data:
-        recipient = PoliticalRecipient(
-            **recipient_data,
-            is_active=True,
-            approval_status="approved",
-            created_by_admin_id=super_admin.id,
-            approved_by_admin_id=super_admin.id
-        )
-        db.add(recipient)
+    if db.query(PoliticalRecipient).count() == 0:
+        for recipient_data in recipients_data:
+            recipient = PoliticalRecipient(
+                **recipient_data,
+                is_active=True,
+                approval_status="approved",
+                created_by_admin_id=super_admin.id,
+                approved_by_admin_id=super_admin.id
+            )
+            db.add(recipient)
     
     # Create advocacy topics
     topics_data = [
@@ -196,15 +202,16 @@ def seed_defaults(db):
         }
     ]
     
-    for topic_data in topics_data:
-        topic = AdvocacyTopic(
-            **topic_data,
-            is_active=True,
-            approval_status="approved",
-            created_by_admin_id=super_admin.id,
-            approved_by_admin_id=super_admin.id
-        )
-        db.add(topic)
+    if db.query(AdvocacyTopic).count() == 0:
+        for topic_data in topics_data:
+            topic = AdvocacyTopic(
+                **topic_data,
+                is_active=True,
+                approval_status="approved",
+                created_by_admin_id=super_admin.id,
+                approved_by_admin_id=super_admin.id
+            )
+            db.add(topic)
 
     db.commit()
     

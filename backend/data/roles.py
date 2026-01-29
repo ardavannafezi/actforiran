@@ -9,6 +9,8 @@ DEFAULT_RECIPIENT_ROLES = [
     "Minister Adviser",
     "Foreign Minister",
     "Foreign Minister Adviser",
+    "Secretary of State",
+    "Chancellor",
     "MP",
     "Parliament Member",
     "Senator",
