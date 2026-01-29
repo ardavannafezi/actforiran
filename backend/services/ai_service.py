@@ -63,7 +63,13 @@ def _parse_subject_body(text: str) -> Tuple[str, str]:
     if not lines:
         return "Urgent: Action Needed on Iran Human Rights Crisis", ""
 
-    subject = lines[0][:60]
+    subject = lines[0]
+    if subject.lower().startswith("subject:"):
+        subject = subject[8:].strip()
+    
+    if len(subject) > 78:
+        subject = subject[:75] + "..."
+    
     body = "\n".join(lines[1:]) if len(lines) > 1 else ""
     return subject, body
 

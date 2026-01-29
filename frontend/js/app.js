@@ -236,6 +236,20 @@ function validateCurrentStep() {
 // ============================================
 async function loadCountries() {
     try {
+        // Fetch suggested country based on IP
+        let suggestedCountry = null;
+        try {
+            const suggestResponse = await fetch(`${API_BASE}/api/v1/suggest-country`);
+            if (suggestResponse.ok) {
+                const suggestData = await suggestResponse.json();
+                if (suggestData.suggested_country) {
+                    suggestedCountry = suggestData.suggested_country;
+                }
+            }
+        } catch (err) {
+            console.log('Could not fetch suggested country:', err);
+        }
+        
         const response = await fetch(`${API_BASE}/api/v1/countries`);
         if (!response.ok) throw new Error('Failed to load countries');
         
@@ -244,6 +258,15 @@ async function loadCountries() {
         
         elements.countrySelect.innerHTML = '<option value="">یک کشور انتخاب کنید...</option>' +
             state.countries.map(c => `<option value="${c.code}">${c.flag || ''} ${c.name_persian || c.name}</option>`).join('');
+
+        // Show suggested country hint
+        const hintElement = document.getElementById('suggestedCountryHint');
+        if (suggestedCountry && hintElement) {
+            hintElement.textContent = `(پیشنهاد: ${suggestedCountry.flag} ${suggestedCountry.name})`;
+            // Auto-select suggested country
+            elements.countrySelect.value = suggestedCountry.code;
+            handleCountryChange({ target: { value: suggestedCountry.code } });
+        }
 
         if (state.selectedCountry) {
             updateSelectedCountryLabels(state.selectedCountry);
