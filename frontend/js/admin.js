@@ -16,6 +16,7 @@ let token = sessionStorage.getItem('adminToken');
 let adminData = null;
 let countries = [];
 let roles = [];
+let recipientsAdmin = [];
 
 // DOM Elements (will be set in DOMContentLoaded)
 let loginContainer;
@@ -187,6 +188,7 @@ async function loadDashboardData() {
 
 async function loadStats() {
     try {
+        const token = sessionStorage.getItem('adminToken');
         // Load countries count
         const countriesRes = await fetch(`${API_BASE}/api/v1/countries`);
         const countriesData = await countriesRes.json();
@@ -202,8 +204,19 @@ async function loadStats() {
         const topicsData = await topicsRes.json();
         document.getElementById('statTopics').textContent = toPersian(topicsData.topics?.length || 0);
         
-        // Emails count (placeholder)
-        document.getElementById('statEmails').textContent = '۰';
+        if (token) {
+            const overviewRes = await fetch(`${API_BASE}/api/v1/admin/analytics/overview`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (overviewRes.ok) {
+                const overview = await overviewRes.json();
+                document.getElementById('statEmails').textContent = toPersian(overview.total_emails || 0);
+            } else {
+                document.getElementById('statEmails').textContent = '۰';
+            }
+        } else {
+            document.getElementById('statEmails').textContent = '۰';
+        }
         
     } catch (error) {
         console.error('Error loading stats:', error);
@@ -272,24 +285,31 @@ async function loadRoles() {
 
 async function loadRecipients() {
     try {
-        const response = await fetch(`${API_BASE}/api/v1/recipients`);
-        const data = await response.json();
-        const recipients = data.recipients || [];
+        const response = await fetch(`${API_BASE}/api/v1/admin/recipients`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const recipients = await response.json();
+        recipientsAdmin = Array.isArray(recipients) ? recipients : [];
         
         const tbody = document.getElementById('recipientsTableBody');
         
-        if (recipients.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="loading">گیرنده‌ای یافت نشد</td></tr>';
+        if (recipientsAdmin.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="loading">گیرنده‌ای یافت نشد</td></tr>';
             return;
         }
         
-        tbody.innerHTML = recipients.map(r => `
+        tbody.innerHTML = recipientsAdmin.map(r => `
             <tr>
                 <td>${r.full_name}</td>
                 <td>${r.email_address}</td>
-                <td>${r.display_title || '-'}</td>
+                <td>${r.custom_title || r.role_name || '-'}</td>
+                <td>${r.media_outlets || '-'}</td>
                 <td>${r.country_name}</td>
-                <td><span class="badge badge-success">فعال</span></td>
+                <td>
+                    <span class="badge ${r.approval_status === 'approved' ? 'badge-success' : 'badge-warning'}">
+                        ${r.approval_status === 'approved' ? 'تایید شده' : 'در انتظار'}
+                    </span>
+                </td>
                 <td class="actions">
                     <button class="btn btn-secondary btn-sm" onclick="editRecipient(${r.id})">ویرایش</button>
                     <button class="btn btn-secondary btn-sm" onclick="deleteRecipient(${r.id})">حذف</button>
@@ -300,7 +320,7 @@ async function loadRecipients() {
     } catch (error) {
         console.error('Error loading recipients:', error);
         document.getElementById('recipientsTableBody').innerHTML = 
-            '<tr><td colspan="6" class="loading">خطا در بارگذاری</td></tr>';
+            '<tr><td colspan="7" class="loading">خطا در بارگذاری</td></tr>';
     }
 }
 
@@ -365,7 +385,8 @@ document.getElementById('recipientForm').addEventListener('submit', async (e) =>
         email_address: document.getElementById('recipientEmail').value,
         role_id: parseInt(document.getElementById('recipientRole').value),
         country_code: document.getElementById('recipientCountry').value,
-        custom_title: document.getElementById('recipientTitle').value || null
+        custom_title: document.getElementById('recipientTitle').value || null,
+        media_outlets: document.getElementById('recipientMedia').value || null
     };
     
     try {
@@ -399,9 +420,17 @@ document.getElementById('recipientForm').addEventListener('submit', async (e) =>
 });
 
 async function editRecipient(id) {
-    // In a real app, fetch recipient data by ID
+    const recipient = recipientsAdmin.find(r => r.id === id);
     document.getElementById('recipientModalTitle').textContent = 'ویرایش گیرنده';
     document.getElementById('recipientId').value = id;
+    if (recipient) {
+        document.getElementById('recipientName').value = recipient.full_name || '';
+        document.getElementById('recipientEmail').value = recipient.email_address || '';
+        document.getElementById('recipientRole').value = recipient.role_id || '';
+        document.getElementById('recipientCountry').value = recipient.country_code || '';
+        document.getElementById('recipientTitle').value = recipient.custom_title || '';
+        document.getElementById('recipientMedia').value = recipient.media_outlets || '';
+    }
     openModal('recipientModal');
 }
 
@@ -824,7 +853,11 @@ async function saveCampaign(e) {
         
         closeModal('campaignModal');
         await loadCampaigns();
-        showNotification(campaignId ? 'کمپین ویرایش شد' : 'کمپین ایجاد شد', 'success');
+        if (!campaignId && adminData && adminData.role !== 'super_admin') {
+            showNotification('کمپین ایجاد شد، منتظر تایید بمانید', 'info');
+        } else {
+            showNotification(campaignId ? 'کمپین ویرایش شد' : 'کمپین ایجاد شد', 'success');
+        }
         
     } catch (error) {
         console.error('Error saving campaign:', error);
@@ -882,7 +915,7 @@ async function loadCampaignAnalytics() {
         ]);
         
         // Update overview stats
-        document.getElementById('analyticsTotal').textContent = toPersian(overview.total_emails || 0);
+        document.getElementById('analyticsTotal').textContent = toPersian(overview.total_emails || overview.total_emails_generated || 0);
         document.getElementById('analyticsSuccess').textContent = overview.success_rate || '0%';
         
         // Render campaign analytics
@@ -1201,7 +1234,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
-            if (!response.ok) throw new Error('Failed to approve campaign');
+            if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error('اجازه ندارید. فقط سوپرادمین می‌تواند تایید کند');
+                }
+                throw new Error('خطا در تایید کمپین');
+            }
             
             loadPendingCampaigns();
             loadCampaigns();
@@ -1226,7 +1264,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ reason: reason || '' })
             });
             
-            if (!response.ok) throw new Error('Failed to reject campaign');
+            if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error('اجازه ندارید. فقط سوپرادمین می‌تواند رد کند');
+                }
+                throw new Error('خطا در رد کمپین');
+            }
             
             loadPendingCampaigns();
             showNotification('کمپین رد شد', 'error');
@@ -1237,7 +1280,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ==================== CHARTS ====================
     
-    let campaignChart, countryChart;
+    let campaignChart, countryChart, userCountryChart;
     
     window.renderCharts = function(analytics) {
         // Campaign Distribution Chart
@@ -1282,7 +1325,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 data: {
                     labels: countries.map(c => c.country),
                     datasets: [{
-                        data: countries.map(c => c.count),
+                        data: countries.map(c => c.email_count),
                         backgroundColor: [
                             'rgba(99, 102, 241, 0.8)',
                             'rgba(236, 72, 153, 0.8)',
@@ -1312,16 +1355,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+
+        // User Countries Chart
+        const userCountryCtx = document.getElementById('userCountryChart');
+        if (userCountryCtx && analytics.user_countries) {
+            if (userCountryChart) userCountryChart.destroy();
+
+            const users = analytics.user_countries.slice(0, 10);
+            userCountryChart = new Chart(userCountryCtx, {
+                type: 'bar',
+                data: {
+                    labels: users.map(u => u.country),
+                    datasets: [{
+                        label: 'کاربر',
+                        data: users.map(u => u.user_count),
+                        backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                        borderColor: 'rgb(34, 197, 94)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
     };
 
-    // Update loadAnalytics to render charts
-    const originalLoadAnalytics = window.loadAnalytics;
+    // Load analytics and render charts
     window.loadAnalytics = async function() {
-        await originalLoadAnalytics();
+        await loadCampaignAnalytics();
         
         const token = sessionStorage.getItem('adminToken');
         try {
-        const response = await fetch(`${API_BASE}/api/v1/admin/analytics`, {
+            const response = await fetch(`${API_BASE}/api/v1/admin/analytics`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             

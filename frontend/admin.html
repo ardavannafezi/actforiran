@@ -108,13 +108,14 @@
                                 <th>نام</th>
                                 <th>ایمیل</th>
                                 <th>سمت</th>
+                                <th>رسانه‌ها</th>
                                 <th>کشور</th>
                                 <th>وضعیت</th>
                                 <th>عملیات</th>
                             </tr>
                         </thead>
                         <tbody id="recipientsTableBody">
-                            <tr><td colspan="6" class="loading">در حال بارگذاری...</td></tr>
+                            <tr><td colspan="7" class="loading">در حال بارگذاری...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -300,6 +301,10 @@
                         <label>عنوان سفارشی (اختیاری)</label>
                         <input type="text" id="recipientTitle" class="form-input">
                     </div>
+                    <div class="form-group">
+                        <label>رسانه‌ها و خبرگزاری‌ها (اختیاری)</label>
+                        <textarea id="recipientMedia" class="form-textarea" rows="3" placeholder="مثال: Reuters, AP, BBC, ..."></textarea>
+                    </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">ذخیره</button>
                 </form>
             </div>
@@ -424,6 +429,10 @@
                 <div class="chart-container" style="background: var(--card-bg); padding: 20px; border-radius: 12px;">
                     <h4 style="margin-bottom: 16px;">کشورهای برتر</h4>
                     <canvas id="countryChart"></canvas>
+                </div>
+                <div class="chart-container" style="background: var(--card-bg); padding: 20px; border-radius: 12px;">
+                    <h4 style="margin-bottom: 16px;">کاربران بر اساس کشور</h4>
+                    <canvas id="userCountryChart"></canvas>
                 </div>
             </div>
         </div>

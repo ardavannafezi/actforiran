@@ -360,6 +360,7 @@ async def list_recipients(
             "role_id": r.role_id,
             "role_name": role_name,
             "custom_title": r.custom_title,
+            "media_outlets": r.media_outlets,
             "country_code": r.country_code,
             "country_name": country_name,
             "approval_status": r.approval_status,
@@ -391,6 +392,7 @@ async def create_recipient(
         email_address=payload.email_address,
         role_id=payload.role_id,
         custom_title=payload.custom_title,
+        media_outlets=payload.media_outlets,
         country_code=payload.country_code.upper(),
         approval_status=approval_status,
         created_by_admin_id=admin.id,
@@ -418,6 +420,7 @@ async def create_recipient(
         "role_id": recipient.role_id,
         "role_name": role.name,
         "custom_title": recipient.custom_title,
+        "media_outlets": recipient.media_outlets,
         "country_code": recipient.country_code,
         "country_name": country.name,
         "approval_status": recipient.approval_status,
@@ -455,6 +458,8 @@ async def update_recipient(
         recipient.email_address = payload.email_address
     if payload.custom_title is not None:
         recipient.custom_title = payload.custom_title
+    if payload.media_outlets is not None:
+        recipient.media_outlets = payload.media_outlets
     if payload.is_active is not None:
         recipient.is_active = payload.is_active
 
@@ -487,6 +492,7 @@ async def update_recipient(
         "role_id": recipient.role_id,
         "role_name": role.name if role else "",
         "custom_title": recipient.custom_title,
+        "media_outlets": recipient.media_outlets,
         "country_code": recipient.country_code,
         "country_name": country.name if country else "",
         "approval_status": recipient.approval_status,
@@ -1019,10 +1025,12 @@ async def get_analytics_overview(
     from models import EmailGenerationLog
     from sqlalchemy import func
     
-    total_emails = db.query(func.count(EmailGenerationLog.id)).scalar() or 0
-    successful_emails = db.query(func.count(EmailGenerationLog.id)).filter(
+    email_units = func.coalesce(func.array_length(EmailGenerationLog.recipient_ids, 1), 0)
+    total_emails = db.query(func.coalesce(func.sum(email_units), 0)).scalar() or 0
+    successful_emails = db.query(func.coalesce(func.sum(email_units), 0)).filter(
         EmailGenerationLog.generation_successful == True
     ).scalar() or 0
+    total_requests = db.query(func.count(EmailGenerationLog.id)).scalar() or 0
     
     total_recipients = db.query(func.count(PoliticalRecipient.id)).filter(
         PoliticalRecipient.approval_status == "approved"
@@ -1038,6 +1046,8 @@ async def get_analytics_overview(
     
     return {
         "total_emails_generated": total_emails,
+        "total_emails": total_emails,
+        "total_requests": total_requests,
         "successful_emails": successful_emails,
         "failed_emails": total_emails - successful_emails,
         "total_recipients": total_recipients,
@@ -1059,7 +1069,7 @@ async def get_top_countries(
     
     results = db.query(
         EmailGenerationLog.selected_recipient_country,
-        func.count(EmailGenerationLog.id).label('count')
+        func.coalesce(func.sum(func.array_length(EmailGenerationLog.recipient_ids, 1)), 0).label('count')
     ).group_by(
         EmailGenerationLog.selected_recipient_country
     ).order_by(desc('count')).limit(limit).all()
@@ -1378,14 +1388,14 @@ async def get_campaign_analytics(
     results = []
     for campaign in campaigns:
         # Count total emails sent
-        email_count = db.query(func.count(EmailGenerationLog.id)).filter(
+        email_count = db.query(func.coalesce(func.sum(func.array_length(EmailGenerationLog.recipient_ids, 1)), 0)).filter(
             EmailGenerationLog.campaign_id == campaign.id
         ).scalar() or 0
         
         # Get country distribution for this campaign
         country_distribution = db.query(
             EmailGenerationLog.selected_recipient_country,
-            func.count(EmailGenerationLog.id).label('count')
+            func.coalesce(func.sum(func.array_length(EmailGenerationLog.recipient_ids, 1)), 0).label('count')
         ).filter(
             EmailGenerationLog.campaign_id == campaign.id
         ).group_by(EmailGenerationLog.selected_recipient_country).all()
@@ -1401,6 +1411,88 @@ async def get_campaign_analytics(
         })
     
     return {"campaign_analytics": results}
+
+
+@router.get("/analytics/user-countries")
+async def get_user_countries(
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Get unique users by sender country (based on IP)"""
+    from models import EmailGenerationLog
+    from sqlalchemy import func, desc
+
+    results = db.query(
+        EmailGenerationLog.sender_country_name,
+        EmailGenerationLog.sender_country_code,
+        func.count(func.distinct(EmailGenerationLog.sender_ip_address)).label("user_count"),
+    ).filter(
+        EmailGenerationLog.sender_country_name.isnot(None)
+    ).group_by(
+        EmailGenerationLog.sender_country_name,
+        EmailGenerationLog.sender_country_code,
+    ).order_by(desc("user_count")).limit(limit).all()
+
+    return {
+        "user_countries": [
+            {
+                "country": r[0] or r[1] or "Unknown",
+                "country_code": r[1],
+                "user_count": r[2]
+            }
+            for r in results
+        ]
+    }
+
+
+@router.get("/analytics")
+async def get_analytics_bundle(
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Bundle analytics for charts"""
+    from models import EmailGenerationLog, Campaign
+    from sqlalchemy import func, desc
+
+    top_countries = db.query(
+        EmailGenerationLog.selected_recipient_country,
+        func.coalesce(func.sum(func.array_length(EmailGenerationLog.recipient_ids, 1)), 0).label('count')
+    ).group_by(
+        EmailGenerationLog.selected_recipient_country
+    ).order_by(desc('count')).limit(10).all()
+
+    campaigns = db.query(Campaign).all()
+    campaign_analytics = []
+    for campaign in campaigns:
+        email_count = db.query(func.coalesce(func.sum(func.array_length(EmailGenerationLog.recipient_ids, 1)), 0)).filter(
+            EmailGenerationLog.campaign_id == campaign.id
+        ).scalar() or 0
+        campaign_analytics.append({
+            "campaign_id": campaign.id,
+            "campaign_title": campaign.title,
+            "email_count": email_count
+        })
+
+    user_countries = db.query(
+        EmailGenerationLog.sender_country_name,
+        EmailGenerationLog.sender_country_code,
+        func.count(func.distinct(EmailGenerationLog.sender_ip_address)).label("user_count"),
+    ).filter(
+        EmailGenerationLog.sender_country_name.isnot(None)
+    ).group_by(
+        EmailGenerationLog.sender_country_name,
+        EmailGenerationLog.sender_country_code,
+    ).order_by(desc("user_count")).limit(10).all()
+
+    return {
+        "top_countries": [{"country": r[0], "email_count": r[1]} for r in top_countries],
+        "campaign_analytics": campaign_analytics,
+        "user_countries": [
+            {"country": r[0] or r[1] or "Unknown", "country_code": r[1], "user_count": r[2]}
+            for r in user_countries
+        ],
+    }
 
 
 # ==================== ADMIN MANAGEMENT ====================

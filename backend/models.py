@@ -60,6 +60,7 @@ class PoliticalRecipient(Base):
     email_address = Column(String(255), nullable=False, index=True)
     role_id = Column(Integer, ForeignKey("recipient_roles.id"), nullable=False)
     custom_title = Column(String(255), nullable=True)
+    media_outlets = Column(Text, nullable=True)
     country_code = Column(String(3), ForeignKey("countries.code"), nullable=False)
     is_active = Column(Boolean, default=True)
     approval_status = Column(String(20), default="pending")

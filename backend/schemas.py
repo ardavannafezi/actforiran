@@ -91,6 +91,7 @@ class PoliticalRecipientCreate(BaseModel):
     email_address: EmailStr
     role_id: int
     custom_title: Optional[str] = Field(None, max_length=255)
+    media_outlets: Optional[str] = None
     country_code: str = Field(..., min_length=3, max_length=3)
 
 
@@ -99,6 +100,7 @@ class PoliticalRecipientUpdate(BaseModel):
     email_address: Optional[EmailStr] = None
     role_id: Optional[int] = None
     custom_title: Optional[str] = Field(None, max_length=255)
+    media_outlets: Optional[str] = None
     country_code: Optional[str] = Field(None, min_length=3, max_length=3)
     is_active: Optional[bool] = None
 
@@ -110,6 +112,7 @@ class PoliticalRecipientAdminOut(BaseModel):
     role_id: int
     role_name: str
     custom_title: Optional[str] = None
+    media_outlets: Optional[str] = None
     country_code: str
     country_name: str
     approval_status: str

@@ -147,6 +147,12 @@ async def list_campaigns(db: Session = Depends(get_db)):
         Campaign.is_hot.is_(True),
         Campaign.approval_status == "approved"
     ).order_by(Campaign.display_order, Campaign.created_at.desc()).all()
+
+    if not campaigns:
+        campaigns = db.query(Campaign).filter(
+            Campaign.is_active.is_(True),
+            Campaign.approval_status == "approved"
+        ).order_by(Campaign.display_order, Campaign.created_at.desc()).all()
     
     result = []
     for campaign in campaigns:
@@ -157,6 +163,8 @@ async def list_campaigns(db: Session = Depends(get_db)):
             "description": campaign.description,
             "slug": campaign.slug,
             "icon": campaign.icon or "🔥",
+            "is_hot": campaign.is_hot,
+            "is_active": campaign.is_active,
             "country": {
                 "code": campaign.country_code,
                 "name": country.name if country else "",
@@ -236,6 +244,19 @@ async def generate_email_endpoint(
     if sender_citizenship_status not in ["international_supporter", "iranian_citizen", "selected_country_citizen"]:
         raise HTTPException(status_code=400, detail="Invalid sender citizenship status")
 
+    sender_country_code = None
+    sender_country_name = None
+    client_ip = request.client.host if request.client else None
+    if client_ip and client_ip not in ["127.0.0.1", "localhost"]:
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"https://ipapi.co/{client_ip}/json/")
+                data = response.json()
+                sender_country_code = data.get("country_code")
+                sender_country_name = data.get("country_name")
+        except Exception:
+            pass
+
     try:
         subject, body, token_usage = await generate_email(
             country_name=country.name,
@@ -253,8 +274,8 @@ async def generate_email_endpoint(
         log_entry = EmailGenerationLog(
             campaign_id=payload.campaign_id,
             sender_ip_address=request.client.host if request.client else None,
-            sender_country_code=None,
-            sender_country_name=None,
+            sender_country_code=sender_country_code,
+            sender_country_name=sender_country_name,
             sender_user_name=payload.user_name,
             sender_citizenship_status=sender_citizenship_status,
             is_country_resident=is_country_resident,

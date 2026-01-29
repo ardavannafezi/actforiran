@@ -350,18 +350,20 @@ function renderCampaigns() {
     
     // Prefer hot campaigns, fallback to any active campaigns
     let hotCampaigns = state.campaigns
-        .filter(c => c.is_hot && c.is_active)
+        .filter(c => (c.is_hot !== false) && (c.is_active !== false))
         .sort((a, b) => a.display_order - b.display_order)
         .slice(0, 5);
 
     if (hotCampaigns.length === 0) {
         hotCampaigns = state.campaigns
-            .filter(c => c.is_active)
+            .filter(c => c.is_active !== false)
             .sort((a, b) => a.display_order - b.display_order)
             .slice(0, 5);
     }
 
     if (hotCampaigns.length === 0) {
+        campaignsSection.style.display = 'block';
+        campaignsList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 24px;">فعلاً کمپین فعالی ثبت نشده است</p>';
         return;
     }
     
@@ -553,15 +555,11 @@ function renderRecipients() {
     `).join('')}
     `;
     
-    // Add event listeners
+    // Add event listeners (iOS-friendly)
     elements.recipientsList.querySelectorAll('.checkbox-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            
-            if (e.target !== checkbox) {
-                checkbox.checked = !checkbox.checked;
-            }
+        const checkbox = item.querySelector('input[type="checkbox"]');
 
+        const applySelection = () => {
             if (item.dataset.id === 'all') {
                 if (checkbox.checked) {
                     state.recipients.forEach(r => state.selectedRecipients.add(r.id));
@@ -571,9 +569,8 @@ function renderRecipients() {
                 renderRecipients();
                 return;
             }
-            
-            const id = parseInt(item.dataset.id);
 
+            const id = parseInt(item.dataset.id);
             if (checkbox.checked) {
                 state.selectedRecipients.add(id);
                 item.classList.add('selected');
@@ -581,7 +578,19 @@ function renderRecipients() {
                 state.selectedRecipients.delete(id);
                 item.classList.remove('selected');
             }
-        });
+        };
+
+        checkbox.addEventListener('change', applySelection);
+
+        const toggleFromCard = (e) => {
+            if (e.target === checkbox) return;
+            e.preventDefault();
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+
+        item.addEventListener('click', toggleFromCard);
+        item.addEventListener('touchend', toggleFromCard, { passive: false });
     });
 }
 
@@ -601,16 +610,12 @@ function renderTopics() {
         </label>
     `).join('');
     
-    // Add event listeners
+    // Add event listeners (iOS-friendly)
     elements.topicsList.querySelectorAll('.checkbox-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            const id = parseInt(item.dataset.id);
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            
-            if (e.target !== checkbox) {
-                checkbox.checked = !checkbox.checked;
-            }
-            
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        const id = parseInt(item.dataset.id);
+
+        const applySelection = () => {
             if (checkbox.checked) {
                 state.selectedTopics.add(id);
                 item.classList.add('selected');
@@ -618,7 +623,19 @@ function renderTopics() {
                 state.selectedTopics.delete(id);
                 item.classList.remove('selected');
             }
-        });
+        };
+
+        checkbox.addEventListener('change', applySelection);
+
+        const toggleFromCard = (e) => {
+            if (e.target === checkbox) return;
+            e.preventDefault();
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+
+        item.addEventListener('click', toggleFromCard);
+        item.addEventListener('touchend', toggleFromCard, { passive: false });
     });
 }
 

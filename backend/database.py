@@ -437,6 +437,18 @@ def run_migrations(db: Session):
             print("   ➕ Need to add sender_citizenship_status to email_generation_logs")
     except Exception as e:
         print(f"   ⚠️  Could not check email_generation_logs.sender_citizenship_status: {e}")
+
+    # Check political_recipients table
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='political_recipients' AND column_name='media_outlets'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE political_recipients ADD COLUMN media_outlets TEXT")
+            print("   ➕ Need to add media_outlets to political_recipients")
+    except Exception as e:
+        print(f"   ⚠️  Could not check political_recipients.media_outlets: {e}")
     
     # Run migrations
     if migrations:
