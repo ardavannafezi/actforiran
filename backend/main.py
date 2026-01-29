@@ -41,6 +41,7 @@ allow_origins = list(dict.fromkeys(default_origins + extra_origins))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
+    allow_origin_regex=r"https://(www\.)?actforiran\.org",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

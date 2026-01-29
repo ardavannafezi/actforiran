@@ -186,6 +186,8 @@ async def generate_email_endpoint(
     payload: GenerateEmailRequest,
     db: Session = Depends(get_db),
 ):
+    if not os.getenv("OPENAI_API_KEY"):
+        raise HTTPException(status_code=503, detail="AI service is not configured")
     country = db.query(Country).filter(Country.code == payload.country_code.upper()).first()
     if not country:
         raise HTTPException(status_code=400, detail="Invalid country code")
