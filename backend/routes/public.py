@@ -12,7 +12,8 @@ from models import AdvocacyTopic, Country, PoliticalRecipient, RecipientRole, Em
 from schemas import (
     CountriesResponse,
     GenerateEmailRequest,
-    GenerateEmailResponse,
+    GenerateEmailGroupsResponse,
+    LogEmailSendRequest,
     RecipientsResponse,
     TopicsResponse,
 )
@@ -178,7 +179,7 @@ async def list_campaigns(db: Session = Depends(get_db)):
     return {"campaigns": result}
 
 
-@router.post("/generate-email", response_model=GenerateEmailResponse)
+@router.post("/generate-email", response_model=GenerateEmailGroupsResponse)
 @limiter.limit("5/hour")
 async def generate_email_endpoint(
     request: Request,
@@ -210,17 +211,6 @@ async def generate_email_endpoint(
     if len(topics) != len(payload.topic_ids):
         raise HTTPException(status_code=400, detail="One or more topics are invalid")
 
-    recipients_payload = []
-    for recipient, role_name in recipients:
-        recipients_payload.append(
-            {
-                "id": recipient.id,
-                "full_name": recipient.full_name,
-                "email_address": recipient.email_address,
-                "display_title": recipient.custom_title or role_name,
-            }
-        )
-
     topics_payload = [
         {
             "id": t.id,
@@ -232,15 +222,76 @@ async def generate_email_endpoint(
         for t in topics
     ]
 
-    subject = ""
-    body = ""
     token_usage = 0
-    error_message = None
-    success = True
     sender_citizenship_status = payload.sender_citizenship_status
     if not sender_citizenship_status and payload.is_resident is not None:
         sender_citizenship_status = "selected_country_citizen" if payload.is_resident else "international_supporter"
 
+    if sender_citizenship_status not in ["international_supporter", "iranian_citizen", "selected_country_citizen"]:
+        raise HTTPException(status_code=400, detail="Invalid sender citizenship status")
+
+    recipients_by_id = {r[0].id: r for r in recipients}
+    ordered_recipient_ids = payload.recipient_ids
+
+    def chunk_list(items, size):
+        return [items[i:i + size] for i in range(0, len(items), size)]
+
+    groups = []
+    for group_ids in chunk_list(ordered_recipient_ids, 15):
+        group_recipients = [recipients_by_id[rid] for rid in group_ids if rid in recipients_by_id]
+        group_payload = [
+            {
+                "id": r[0].id,
+                "full_name": r[0].full_name,
+                "email_address": r[0].email_address,
+                "display_title": r[0].custom_title or r[1],
+            }
+            for r in group_recipients
+        ]
+
+        try:
+            subject, body, used_tokens = await generate_email(
+                country_name=country.name,
+                recipients=group_payload,
+                topics=topics_payload,
+                sender_citizenship_status=sender_citizenship_status,
+                user_name=payload.user_name,
+            )
+            token_usage += used_tokens
+        except AIServiceError as exc:
+            raise HTTPException(status_code=502, detail="AI service failed to generate email") from exc
+
+        recipient_emails = [r[0].email_address for r in group_recipients]
+        mailto_recipients = ",".join(recipient_emails)
+        mailto_link = (
+            f"mailto:{mailto_recipients}?subject={quote(subject)}&body={quote(body)}"
+            if subject and body
+            else ""
+        )
+
+        groups.append({
+            "subject": subject,
+            "body": body,
+            "recipients": [{"name": r[0].full_name, "email": r[0].email_address} for r in group_recipients],
+            "recipient_ids": group_ids,
+            "mailto_link": mailto_link,
+        })
+
+    return {"groups": groups}
+
+
+@router.post("/log-email-send")
+@limiter.limit("30/hour")
+async def log_email_send(
+    request: Request,
+    payload: LogEmailSendRequest,
+    db: Session = Depends(get_db),
+):
+    country = db.query(Country).filter(Country.code == payload.country_code.upper()).first()
+    if not country:
+        raise HTTPException(status_code=400, detail="Invalid country code")
+
+    sender_citizenship_status = payload.sender_citizenship_status
     if sender_citizenship_status not in ["international_supporter", "iranian_citizen", "selected_country_citizen"]:
         raise HTTPException(status_code=400, detail="Invalid sender citizenship status")
 
@@ -257,55 +308,25 @@ async def generate_email_endpoint(
         except Exception:
             pass
 
-    try:
-        subject, body, token_usage = await generate_email(
-            country_name=country.name,
-            recipients=recipients_payload,
-            topics=topics_payload,
-            sender_citizenship_status=sender_citizenship_status,
-            user_name=payload.user_name,
-        )
-    except AIServiceError as exc:
-        success = False
-        error_message = str(exc)
-        raise HTTPException(status_code=502, detail="AI service failed to generate email") from exc
-    finally:
-        is_country_resident = sender_citizenship_status == "selected_country_citizen"
-        log_entry = EmailGenerationLog(
-            campaign_id=payload.campaign_id,
-            sender_ip_address=request.client.host if request.client else None,
-            sender_country_code=sender_country_code,
-            sender_country_name=sender_country_name,
-            sender_user_name=payload.user_name,
-            sender_citizenship_status=sender_citizenship_status,
-            is_country_resident=is_country_resident,
-            selected_recipient_country=country.name,
-            recipient_ids=payload.recipient_ids,
-            topic_ids=payload.topic_ids,
-            generated_subject=subject or None,
-            generated_body=(body[:500] + "...") if body and len(body) > 500 else body,
-            generation_successful=success,
-            error_message=error_message,
-            ai_model_used=os.getenv("OPENAI_MODEL", "o4-mini"),
-            ai_tokens_used=token_usage,
-        )
-        db.add(log_entry)
-        db.commit()
-
-    recipient_emails = [r[0].email_address for r in recipients]
-    mailto_recipients = ",".join(recipient_emails)
-
-    mailto_link = (
-        f"mailto:{mailto_recipients}?subject={quote(subject)}&body={quote(body)}"
-        if subject and body
-        else ""
+    log_entry = EmailGenerationLog(
+        campaign_id=payload.campaign_id,
+        sender_ip_address=request.client.host if request.client else None,
+        sender_country_code=sender_country_code,
+        sender_country_name=sender_country_name,
+        sender_user_name=payload.user_name,
+        sender_citizenship_status=sender_citizenship_status,
+        is_country_resident=sender_citizenship_status == "selected_country_citizen",
+        selected_recipient_country=country.name,
+        recipient_ids=payload.recipient_ids,
+        topic_ids=payload.topic_ids,
+        generated_subject=payload.subject,
+        generated_body=(payload.body[:500] + "...") if payload.body and len(payload.body) > 500 else payload.body,
+        generation_successful=True,
+        error_message=None,
+        ai_model_used=os.getenv("OPENAI_MODEL", "o4-mini"),
+        ai_tokens_used=0,
     )
+    db.add(log_entry)
+    db.commit()
 
-    return {
-        "subject": subject,
-        "body": body,
-        "recipients": [
-            {"name": r[0].full_name, "email": r[0].email_address} for r in recipients
-        ],
-        "mailto_link": mailto_link,
-    }
+    return {"status": "logged"}

@@ -19,12 +19,13 @@ const state = {
     selectedRecipients: new Set(),
     selectedTopics: new Set(),
     citizenshipStatus: null,
+    recipientsPage: 1,
+    recipientsPageSize: 30,
+    recipientsHasMore: true,
     selectedCampaign: null,
     campaignMode: false, // Track if user started from campaign
     generatedEmail: {
-        subject: '',
-        body: '',
-        mailto: ''
+        groups: []
     }
 };
 
@@ -39,9 +40,7 @@ const elements = {
     recipientsList: document.getElementById('recipientsList'),
     topicsList: document.getElementById('topicsList'),
     userName: document.getElementById('userName'),
-    emailSubject: document.getElementById('emailSubject'),
-    emailBody: document.getElementById('emailBody'),
-    sendEmailBtn: document.getElementById('sendEmailBtn'),
+    emailGroups: document.getElementById('emailGroups'),
     selectedCountryLabel: document.getElementById('selectedCountryLabel'),
     selectedCountryInline: document.getElementById('selectedCountryInline')
 };
@@ -149,14 +148,6 @@ function initStepper() {
             state.citizenshipStatus = e.target.value;
         };
     });
-    
-    // Send email button
-    if (elements.sendEmailBtn) {
-        elements.sendEmailBtn.onclick = function(e) {
-            e.preventDefault();
-            sendEmail();
-        };
-    }
     
     console.log('✅ App initialized successfully');
 }
@@ -275,6 +266,8 @@ async function handleCountryChange(e) {
     
     state.selectedCountry = countryCode;
     state.selectedRecipients.clear();
+    state.recipientsPage = 1;
+    state.recipientsHasMore = true;
     updateSelectedCountryLabels(countryCode);
     
     try {
@@ -453,8 +446,9 @@ async function generateEmail() {
     };
     
     try {
-        elements.emailSubject.value = 'در حال تولید ایمیل...';
-        elements.emailBody.value = 'لطفاً صبر کنید...';
+        if (elements.emailGroups) {
+            elements.emailGroups.innerHTML = '<div class="loading">در حال تولید ایمیل...</div>';
+        }
         
         const response = await fetch(`${API_BASE}/api/v1/generate-email`, {
             method: 'POST',
@@ -469,60 +463,81 @@ async function generateEmail() {
         
         const data = await response.json();
         
-        state.generatedEmail.subject = data.subject || '';
-        state.generatedEmail.body = data.body || '';
-        state.generatedEmail.mailto = data.mailto_link || '';
-        
-        elements.emailSubject.value = state.generatedEmail.subject;
-        elements.emailBody.value = state.generatedEmail.body;
-        
-        showNotification('ایمیل با موفقیت تولید شد!', 'success');
+        state.generatedEmail.groups = data.groups || [];
+        renderEmailGroups();
+        showNotification('ایمیل‌ها با موفقیت تولید شد!', 'success');
         
     } catch (error) {
         console.error('Error generating email:', error);
-        
-        // Fallback: Generate sample email locally
-        const country = state.countries.find(c => c.code === state.selectedCountry);
-        const selectedRecipients = state.recipients.filter(r => state.selectedRecipients.has(r.id));
-        const selectedTopics = state.topics.filter(t => state.selectedTopics.has(t.id));
-        
-        const subject = 'فراخوان فوری: حمایت از حقوق بشر در ایران';
-        const body = `به عنوان یک شهروند نگران، از شما درخواست می‌کنم که به وضعیت حقوق بشر در ایران توجه کنید.
-
-موضوعات مورد نظر:
-${selectedTopics.map(t => `• ${t.display_title}`).join('\n')}
-
-مردم ایران به حمایت بین‌المللی شما نیاز دارند.
-
-با احترام`;
-        
-        const emails = selectedRecipients.map(r => r.email_address).join(',');
-        
-        state.generatedEmail.subject = subject;
-        state.generatedEmail.body = body;
-        state.generatedEmail.mailto = `mailto:${emails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        
-        elements.emailSubject.value = subject;
-        elements.emailBody.value = body;
-        
-        showNotification('ایمیل نمونه تولید شد (بدون AI)', 'info');
+        showNotification('خطا در تولید ایمیل با هوش مصنوعی', 'error');
     }
 }
 
-function sendEmail() {
-    // Update mailto with current values (in case user edited)
-    const emails = state.recipients
-        .filter(r => state.selectedRecipients.has(r.id))
-        .map(r => r.email_address)
-        .join(',');
-    
-    const subject = elements.emailSubject.value;
-    const body = elements.emailBody.value;
-    
+async function sendEmailGroup(index) {
+    const group = state.generatedEmail.groups?.[index];
+    if (!group) return;
+
+    const subjectInput = document.getElementById(`emailSubject_${index}`);
+    const bodyInput = document.getElementById(`emailBody_${index}`);
+    const subject = subjectInput ? subjectInput.value : group.subject;
+    const body = bodyInput ? bodyInput.value : group.body;
+
+    const emails = group.recipients.map(r => r.email).join(',');
     const mailto = `mailto:${emails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
+
+    // Log analytics only on send click
+    try {
+        await fetch(`${API_BASE}/api/v1/log-email-send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                country_code: state.selectedCountry,
+                recipient_ids: group.recipient_ids,
+                topic_ids: Array.from(state.selectedTopics),
+                sender_citizenship_status: state.citizenshipStatus,
+                user_name: elements.userName ? elements.userName.value.trim() : null,
+                campaign_id: state.selectedCampaign || null,
+                subject,
+                body
+            })
+        });
+    } catch (error) {
+        console.error('Error logging email send:', error);
+    }
+
     window.location.href = mailto;
     showNotification('در حال باز کردن برنامه ایمیل...', 'success');
+}
+
+window.sendEmailGroup = sendEmailGroup;
+
+function renderEmailGroups() {
+    if (!elements.emailGroups) return;
+    if (!state.generatedEmail.groups || state.generatedEmail.groups.length === 0) {
+        elements.emailGroups.innerHTML = '<div class="loading">ایمیلی تولید نشد</div>';
+        return;
+    }
+
+    elements.emailGroups.innerHTML = state.generatedEmail.groups.map((group, idx) => `
+        <div class="email-group-card">
+            <div class="email-group-header">
+                <div>گروه ${idx + 1} — ${group.recipients.length} گیرنده</div>
+                <div class="email-group-meta">${group.recipients.map(r => r.name).join('، ')}</div>
+            </div>
+            <div class="form-group">
+                <label>موضوع ایمیل</label>
+                <input type="text" id="emailSubject_${idx}" class="form-input" value="${group.subject || ''}">
+            </div>
+            <div class="form-group">
+                <label>متن ایمیل</label>
+                <textarea id="emailBody_${idx}" class="form-textarea" rows="8">${group.body || ''}</textarea>
+            </div>
+            <button class="btn btn-primary btn-large" onclick="sendEmailGroup(${idx})">
+                <span class="btn-icon">✉️</span>
+                ارسال ایمیل گروه ${idx + 1}
+            </button>
+        </div>
+    `).join('');
 }
 
 // ============================================
@@ -544,7 +559,27 @@ function renderRecipients() {
                 <div class="item-subtitle">همه افراد این کشور انتخاب شوند</div>
             </div>
         </label>
-        ${state.recipients.map(recipient => `
+    `;
+    
+    state.recipientsPage = 1;
+    state.recipientsHasMore = true;
+    appendRecipientsPage();
+    bindRecipientSelectionHandlers();
+    setupRecipientsInfiniteScroll();
+}
+
+function appendRecipientsPage() {
+    if (!state.recipientsHasMore) return;
+    const start = (state.recipientsPage - 1) * state.recipientsPageSize;
+    const end = start + state.recipientsPageSize;
+    const slice = state.recipients.slice(start, end);
+    if (slice.length === 0) {
+        state.recipientsHasMore = false;
+        return;
+    }
+
+    const fragment = document.createElement('div');
+    fragment.innerHTML = slice.map(recipient => `
         <label class="checkbox-item ${state.selectedRecipients.has(recipient.id) ? 'selected' : ''}" data-id="${recipient.id}">
             <input type="checkbox" ${state.selectedRecipients.has(recipient.id) ? 'checked' : ''}>
             <div class="item-content">
@@ -552,11 +587,20 @@ function renderRecipients() {
                 <div class="item-subtitle">${recipient.display_title} — ${recipient.country_name}</div>
             </div>
         </label>
-    `).join('')}
-    `;
-    
+    `).join('');
+
+    elements.recipientsList.appendChild(fragment);
+    state.recipientsPage += 1;
+    if (end >= state.recipients.length) {
+        state.recipientsHasMore = false;
+    }
+}
+
+function bindRecipientSelectionHandlers() {
     // Add event listeners (iOS-friendly)
     elements.recipientsList.querySelectorAll('.checkbox-item').forEach(item => {
+        if (item.dataset.bound === 'true') return;
+        item.dataset.bound = 'true';
         const checkbox = item.querySelector('input[type="checkbox"]');
 
         const applySelection = () => {
@@ -591,6 +635,19 @@ function renderRecipients() {
 
         item.addEventListener('click', toggleFromCard);
         item.addEventListener('touchend', toggleFromCard, { passive: false });
+    });
+}
+
+function setupRecipientsInfiniteScroll() {
+    if (!elements.recipientsList || elements.recipientsList.dataset.scrollBound === 'true') return;
+    elements.recipientsList.dataset.scrollBound = 'true';
+    elements.recipientsList.addEventListener('scroll', () => {
+        const el = elements.recipientsList;
+        if (!state.recipientsHasMore) return;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
+            appendRecipientsPage();
+            bindRecipientSelectionHandlers();
+        }
     });
 }
 

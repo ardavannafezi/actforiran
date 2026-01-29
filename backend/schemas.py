@@ -57,6 +57,30 @@ class GenerateEmailResponse(BaseModel):
     body: str
     recipients: List[RecipientEmailOut]
     mailto_link: str
+    groups: Optional[list] = None
+
+
+class EmailGroupOut(BaseModel):
+    subject: str
+    body: str
+    recipients: List[RecipientEmailOut]
+    recipient_ids: List[int]
+    mailto_link: str
+
+
+class GenerateEmailGroupsResponse(BaseModel):
+    groups: List[EmailGroupOut]
+
+
+class LogEmailSendRequest(BaseModel):
+    country_code: str = Field(..., min_length=3, max_length=3)
+    recipient_ids: List[int] = Field(..., min_length=1)
+    topic_ids: List[int] = Field(..., min_length=1)
+    sender_citizenship_status: str
+    user_name: Optional[str] = None
+    campaign_id: Optional[int] = None
+    subject: Optional[str] = None
+    body: Optional[str] = None
 
 
 class AdminLoginRequest(BaseModel):

@@ -113,7 +113,7 @@ async def generate_email(
     payload = {
         "model": OPENAI_MODEL,
         "messages": [
-            {"role": "developer", "content": system_prompt},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
         "temperature": 0.9,  # Higher for more variation

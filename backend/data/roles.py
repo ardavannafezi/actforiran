@@ -21,4 +21,5 @@ DEFAULT_RECIPIENT_ROLES = [
     "Religious Figure Team",
     "Celebrity",
     "Celebrity Team",
+    "Media",
 ]
