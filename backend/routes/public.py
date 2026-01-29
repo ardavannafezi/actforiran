@@ -325,7 +325,7 @@ async def log_email_send(
         generated_body=(payload.body[:500] + "...") if payload.body and len(payload.body) > 500 else payload.body,
         generation_successful=True,
         error_message=None,
-        ai_model_used=os.getenv("OPENAI_MODEL", "o4-mini"),
+        ai_model_used=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         ai_tokens_used=0,
     )
     db.add(log_entry)
