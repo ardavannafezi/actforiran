@@ -27,10 +27,20 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# CORS Configuration - FIXED for Railway deployment
+# CORS Configuration
+default_origins = [
+    "https://actforiran.org",
+    "https://www.actforiran.org",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+env_origins = os.getenv("FRONTEND_URLS") or os.getenv("FRONTEND_URL") or ""
+extra_origins = [o.strip() for o in env_origins.split(",") if o.strip()]
+allow_origins = list(dict.fromkeys(default_origins + extra_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allow_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
