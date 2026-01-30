@@ -187,6 +187,12 @@ function goToStep(step) {
         elements.nextBtn.style.display = 'flex';
         elements.nextBtn.innerHTML = 'بعدی <span class="btn-icon">←</span>';
     }
+    
+    // Scroll to top of stepper container to keep form in view
+    const stepperContainer = document.querySelector('.stepper-container');
+    if (stepperContainer) {
+        stepperContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 function handleNextStep() {

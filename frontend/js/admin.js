@@ -915,25 +915,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Load campaigns analytics
 async function loadCampaignAnalytics() {
+    console.log('📊 Loading campaign analytics...');
     try {
+        const token = sessionStorage.getItem('adminToken');
+        if (!token) {
+            console.error('❌ No admin token found');
+            return;
+        }
+        
         const [overview, campaignStats] = await Promise.all([
             fetch(`${API_BASE}/api/v1/admin/analytics/overview`, {
                 headers: { 'Authorization': `Bearer ${token}` }
-            }).then(r => r.json()),
+            }).then(r => {
+                console.log('📥 Overview response status:', r.status);
+                return r.json();
+            }),
             fetch(`${API_BASE}/api/v1/admin/analytics/campaigns`, {
                 headers: { 'Authorization': `Bearer ${token}` }
-            }).then(r => r.json())
+            }).then(r => {
+                console.log('📥 Campaigns response status:', r.status);
+                return r.json();
+            })
         ]);
         
-        // Update overview stats
-        document.getElementById('analyticsTotal').textContent = toPersian(overview.total_emails || overview.total_emails_generated || 0);
-        document.getElementById('analyticsSuccess').textContent = overview.success_rate || '0%';
-        document.getElementById('analyticsUnique').textContent = toPersian(overview.unique_users || 0);
-        document.getElementById('analyticsCampaigns').textContent = toPersian(overview.active_campaigns || 0);
+        console.log('📊 Overview data:', overview);
+        console.log('📊 Campaign stats:', campaignStats);
+        
+        // Update overview stats with fallbacks
+        const totalEmails = overview.total_emails || overview.total_emails_generated || 0;
+        const successRate = overview.success_rate || '0%';
+        const uniqueUsers = overview.unique_users || 0;
+        const activeCampaigns = overview.active_campaigns || 0;
+        
+        console.log('Setting analytics values:', { totalEmails, successRate, uniqueUsers, activeCampaigns });
+        
+        document.getElementById('analyticsTotal').textContent = toPersian(totalEmails);
+        document.getElementById('analyticsSuccess').textContent = successRate;
+        document.getElementById('analyticsUnique').textContent = toPersian(uniqueUsers);
+        document.getElementById('analyticsCampaigns').textContent = toPersian(activeCampaigns);
         
         // Render campaign analytics with enhanced styling
         const list = document.getElementById('campaignAnalyticsList');
-        if (list && campaignStats.campaign_analytics) {
+        if (list && campaignStats.campaign_analytics && campaignStats.campaign_analytics.length > 0) {
+            console.log('📊 Rendering', campaignStats.campaign_analytics.length, 'campaigns');
             list.innerHTML = campaignStats.campaign_analytics.map((ca, index) => `
                 <div class="stat-card" style="margin-bottom: 12px; border-left: 4px solid hsl(${index * 30}, 70%, 60%); background: linear-gradient(90deg, hsla(${index * 30}, 70%, 60%, 0.1) 0%, transparent 100%);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -942,25 +966,37 @@ async function loadCampaignAnalytics() {
                     </div>
                 </div>
             `).join('');
+        } else {
+            console.log('⚠️ No campaign analytics data');
+            if (list) list.innerHTML = '<div class="no-data">هنوز داده‌ای ثبت نشده</div>';
         }
         
         // Load top countries
         const topCountries = await fetch(`${API_BASE}/api/v1/admin/analytics/top-countries`, {
             headers: { 'Authorization': `Bearer ${token}` }
-        }).then(r => r.json());
+        }).then(r => {
+            console.log('📥 Top countries response status:', r.status);
+            return r.json();
+        });
+        
+        console.log('📊 Top countries:', topCountries);
         
         const topCountriesList = document.getElementById('topCountriesList');
-        if (topCountriesList && topCountries.top_countries) {
+        if (topCountriesList && topCountries.top_countries && topCountries.top_countries.length > 0) {
+            console.log('📊 Rendering', topCountries.top_countries.length, 'countries');
             topCountriesList.innerHTML = topCountries.top_countries.slice(0, 10).map(tc => `
                 <tr>
                     <td style="font-weight: 500;">${tc.country}</td>
                     <td><span style="background: linear-gradient(90deg, var(--primary-color), transparent); padding: 4px 12px; border-radius: 6px; color: white; font-weight: 600;">${toPersian(tc.email_count)}</span></td>
                 </tr>
             `).join('');
+        } else {
+            console.log('⚠️ No top countries data');
+            if (topCountriesList) topCountriesList.innerHTML = '<tr><td colspan="2" class="no-data">هنوز داده‌ای ثبت نشده</td></tr>';
         }
         
     } catch (error) {
-        console.error('Error loading analytics:', error);
+        console.error('❌ Error loading analytics:', error);
     }
 }
 
