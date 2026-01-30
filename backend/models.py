@@ -156,3 +156,16 @@ class AdminActivityLog(Base):
     action_details = Column(JSONB, nullable=True)
     ip_address = Column(INET, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class TickerMessage(Base):
+    __tablename__ = "ticker_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_text = Column(Text, nullable=False)
+    is_active = Column(Boolean, default=True)
+    display_order = Column(Integer, default=0)
+    created_by_admin_id = Column(Integer, ForeignKey("administrators.id"), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+

@@ -169,13 +169,23 @@ function showDashboard() {
     if (adminData) {
         document.getElementById('adminEmail').textContent = adminData.email;
         
-        // Hide admins tab for non-super-admins
+        // Hide admins tab and ticker tab for non-super-admins
         const adminsTab = document.querySelector('[data-tab="admins"]');
+        const tickerTab = document.querySelector('[data-tab="ticker"]');
+        
         if (adminsTab) {
             if (adminData.role === 'super_admin') {
                 adminsTab.style.display = 'block';
             } else {
                 adminsTab.style.display = 'none';
+            }
+        }
+        
+        if (tickerTab) {
+            if (adminData.role === 'super_admin') {
+                tickerTab.style.display = 'block';
+            } else {
+                tickerTab.style.display = 'none';
             }
         }
     }
@@ -564,6 +574,8 @@ document.querySelectorAll('.admin-tab').forEach(tab => {
             loadPendingCampaigns();
         } else if (tabName === 'analytics') {
             loadAnalytics();
+        } else if (tabName === 'ticker') {
+            loadTickerMessages();
         }
     });
 });
@@ -574,6 +586,22 @@ document.querySelectorAll('.admin-tab').forEach(tab => {
 function toPersian(num) {
     const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
     return num.toString().replace(/[0-9]/g, w => persianDigits[+w]);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('fa-IR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }).format(date);
 }
 
 // ============================================
@@ -630,6 +658,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+    
+    // Setup ticker form
+    setupTickerForm();
     
     // Check auth
     checkAuth();
@@ -1335,108 +1366,168 @@ document.addEventListener('DOMContentLoaded', () => {
 window.renderCharts = function(analytics) {
     console.log('📈 Rendering charts with data:', analytics);
     
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error('❌ Chart.js not loaded!');
+        return;
+    }
+    
+    console.log('✅ Chart.js version:', Chart.version);
+    
     // Campaign Distribution Chart
     const campaignCtx = document.getElementById('campaignChart');
-    if (campaignCtx && analytics.campaign_analytics) {
-        if (campaignChart) campaignChart.destroy();
-        
-        const campaigns = analytics.campaign_analytics.slice(0, 10);
-        campaignChart = new Chart(campaignCtx, {
-            type: 'bar',
-            data: {
-                labels: campaigns.map(c => c.campaign_title),
-                datasets: [{
-                    label: 'تعداد ایمیل',
-                    data: campaigns.map(c => c.email_count),
-                    backgroundColor: 'rgba(99, 102, 241, 0.8)',
-                    borderColor: 'rgb(99, 102, 241)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: { beginAtZero: true }
-                }
+    console.log('🖼️ Campaign canvas:', campaignCtx);
+    
+    if (campaignCtx && analytics.campaign_analytics && analytics.campaign_analytics.length > 0) {
+        try {
+            if (campaignChart) {
+                console.log('🗑️ Destroying old campaign chart');
+                campaignChart.destroy();
             }
-        });
+            
+            const campaigns = analytics.campaign_analytics.slice(0, 10);
+            console.log('📊 Creating campaign chart with', campaigns.length, 'campaigns');
+            
+            campaignChart = new Chart(campaignCtx, {
+                type: 'bar',
+                data: {
+                    labels: campaigns.map(c => c.campaign_title),
+                    datasets: [{
+                        label: 'تعداد ایمیل',
+                        data: campaigns.map(c => c.email_count),
+                        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                        borderColor: 'rgb(99, 102, 241)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+            console.log('✅ Campaign chart created successfully');
+        } catch (error) {
+            console.error('❌ Error creating campaign chart:', error);
+        }
+    } else {
+        console.log('⚠️ No campaign data or canvas not found');
     }
     
     // Country Distribution Chart
     const countryCtx = document.getElementById('countryChart');
-    if (countryCtx && analytics.top_countries) {
-        if (countryChart) countryChart.destroy();
-        
-        const countries = analytics.top_countries.slice(0, 10);
-        countryChart = new Chart(countryCtx, {
-            type: 'doughnut',
-            data: {
-                labels: countries.map(c => c.country),
-                datasets: [{
-                    data: countries.map(c => c.email_count),
-                    backgroundColor: [
-                        'rgba(99, 102, 241, 0.8)',
-                        'rgba(236, 72, 153, 0.8)',
-                        'rgba(34, 197, 94, 0.8)',
-                        'rgba(251, 191, 36, 0.8)',
-                        'rgba(239, 68, 68, 0.8)',
-                        'rgba(168, 85, 247, 0.8)',
-                        'rgba(59, 130, 246, 0.8)',
-                        'rgba(14, 165, 233, 0.8)',
-                        'rgba(251, 146, 60, 0.8)',
-                        'rgba(132, 204, 22, 0.8)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 15,
-                            font: { size: 11 }
+    console.log('🖼️ Country canvas:', countryCtx);
+    
+    if (countryCtx && analytics.top_countries && analytics.top_countries.length > 0) {
+        try {
+            if (countryChart) {
+                console.log('🗑️ Destroying old country chart');
+                countryChart.destroy();
+            }
+            
+            const countries = analytics.top_countries.slice(0, 10);
+            console.log('📊 Creating country chart with', countries.length, 'countries');
+            
+            countryChart = new Chart(countryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: countries.map(c => c.country),
+                    datasets: [{
+                        data: countries.map(c => c.email_count),
+                        backgroundColor: [
+                            'rgba(99, 102, 241, 0.8)',
+                            'rgba(236, 72, 153, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(251, 191, 36, 0.8)',
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(168, 85, 247, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(14, 165, 233, 0.8)',
+                            'rgba(251, 146, 60, 0.8)',
+                            'rgba(132, 204, 22, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                font: { size: 11 }
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+            console.log('✅ Country chart created successfully');
+        } catch (error) {
+            console.error('❌ Error creating country chart:', error);
+        }
+    } else {
+        console.log('⚠️ No country data or canvas not found');
     }
 
     // User Countries Chart
     const userCountryCtx = document.getElementById('userCountryChart');
-    if (userCountryCtx && analytics.user_countries) {
-        if (userCountryChart) userCountryChart.destroy();
-
-        const users = analytics.user_countries.slice(0, 10);
-        userCountryChart = new Chart(userCountryCtx, {
-            type: 'bar',
-            data: {
-                labels: users.map(u => u.country),
-                datasets: [{
-                    label: 'کاربر',
-                    data: users.map(u => u.user_count),
-                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                    borderColor: 'rgb(34, 197, 94)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: { beginAtZero: true }
-                }
+    console.log('🖼️ User country canvas:', userCountryCtx);
+    
+    if (userCountryCtx && analytics.user_countries && analytics.user_countries.length > 0) {
+        try {
+            if (userCountryChart) {
+                console.log('🗑️ Destroying old user country chart');
+                userCountryChart.destroy();
             }
-        });
+
+            const users = analytics.user_countries.slice(0, 10);
+            console.log('📊 Creating user country chart with', users.length, 'countries');
+            
+            userCountryChart = new Chart(userCountryCtx, {
+                type: 'bar',
+                data: {
+                    labels: users.map(u => u.country),
+                    datasets: [{
+                        label: 'کاربر',
+                        data: users.map(u => u.user_count),
+                        backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                        borderColor: 'rgb(34, 197, 94)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+            console.log('✅ User country chart created successfully');
+        } catch (error) {
+            console.error('❌ Error creating user country chart:', error);
+        }
+    } else {
+        console.log('⚠️ No user country data or canvas not found');
     }
 };
 
@@ -1444,6 +1535,21 @@ window.renderCharts = function(analytics) {
 // Load analytics and render charts (defined globally)
 window.loadAnalytics = async function() {
     console.log('📊 Loading analytics...');
+    
+    // Wait for Chart.js to be available
+    if (typeof Chart === 'undefined') {
+        console.log('⏳ Waiting for Chart.js to load...');
+        setTimeout(() => {
+            if (typeof Chart !== 'undefined') {
+                console.log('✅ Chart.js now available');
+                loadAnalytics();
+            } else {
+                console.error('❌ Chart.js failed to load');
+            }
+        }, 500);
+        return;
+    }
+    
     await loadCampaignAnalytics();
     
     const token = sessionStorage.getItem('adminToken');
@@ -1455,8 +1561,32 @@ window.loadAnalytics = async function() {
         if (response.ok) {
             const analytics = await response.json();
             console.log('📊 Analytics data received:', analytics);
+            
+            // Also load overview data for unique users count
+            const overviewResponse = await fetch(`${API_BASE}/api/v1/admin/analytics/overview`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (overviewResponse.ok) {
+                const overview = await overviewResponse.json();
+                console.log('📊 Overview data:', overview);
+                
+                // Update unique users if available
+                if (overview.unique_users !== undefined) {
+                    document.getElementById('analyticsUnique').textContent = toPersian(overview.unique_users);
+                }
+                
+                // Update active campaigns count
+                if (analytics.campaign_analytics) {
+                    const activeCampaigns = analytics.campaign_analytics.filter(c => c.email_count > 0).length;
+                    document.getElementById('analyticsCampaigns').textContent = toPersian(activeCampaigns);
+                }
+            }
+            
             if (typeof renderCharts === 'function') {
                 renderCharts(analytics);
+            } else {
+                console.error('❌ renderCharts function not found');
             }
         } else {
             console.error('Failed to fetch analytics:', response.status);
@@ -1465,3 +1595,161 @@ window.loadAnalytics = async function() {
         console.error('Failed to load analytics for charts:', error);
     }
 };
+
+// ============================================
+// TICKER MESSAGE MANAGEMENT
+// ============================================
+
+async function loadTickerMessages() {
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/admin/ticker-messages`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            renderTickerMessages(data.ticker_messages || []);
+        } else {
+            showNotification('خطا در بارگذاری پیام‌های نوار', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading ticker messages:', error);
+        showNotification('خطا در بارگذاری پیام‌های نوار', 'error');
+    }
+}
+
+function renderTickerMessages(messages) {
+    const tbody = document.getElementById('tickerTableBody');
+    if (!tbody) return;
+    
+    if (messages.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">هیچ پیامی یافت نشد</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = messages.map(msg => `
+        <tr>
+            <td style="max-width: 400px;">${escapeHtml(msg.message_text)}</td>
+            <td>
+                <span class="status-badge ${msg.is_active ? 'active' : 'inactive'}">
+                    ${msg.is_active ? 'فعال' : 'غیرفعال'}
+                </span>
+            </td>
+            <td>${toPersian(msg.display_order)}</td>
+            <td>${msg.created_at ? formatDate(msg.created_at) : '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-secondary" onclick="editTickerMessage(${msg.id})">ویرایش</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteTickerMessage(${msg.id})">حذف</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function editTickerMessage(id) {
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/admin/ticker-messages`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const message = data.ticker_messages.find(m => m.id === id);
+            
+            if (message) {
+                document.getElementById('tickerId').value = message.id;
+                document.getElementById('tickerMessage').value = message.message_text;
+                document.getElementById('tickerOrder').value = message.display_order;
+                document.getElementById('tickerIsActive').checked = message.is_active;
+                document.getElementById('tickerModalTitle').textContent = 'ویرایش پیام نوار';
+                openModal('tickerModal');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading ticker message:', error);
+        showNotification('خطا در بارگذاری پیام', 'error');
+    }
+}
+
+async function deleteTickerMessage(id) {
+    if (!confirm('آیا از حذف این پیام اطمینان دارید؟')) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/admin/ticker-messages/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            showNotification('پیام با موفقیت حذف شد', 'success');
+            loadTickerMessages();
+        } else {
+            showNotification('خطا در حذف پیام', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting ticker message:', error);
+        showNotification('خطا در حذف پیام', 'error');
+    }
+}
+
+// Setup ticker form handler
+function setupTickerForm() {
+    const form = document.getElementById('tickerForm');
+    const addBtn = document.getElementById('addTickerBtn');
+    
+    if (addBtn) {
+        addBtn.onclick = () => {
+            document.getElementById('tickerForm').reset();
+            document.getElementById('tickerId').value = '';
+            document.getElementById('tickerModalTitle').textContent = 'افزودن پیام نوار';
+            document.getElementById('tickerIsActive').checked = true;
+            openModal('tickerModal');
+        };
+    }
+    
+    if (form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('tickerId').value;
+            const messageText = document.getElementById('tickerMessage').value.trim();
+            const displayOrder = parseInt(document.getElementById('tickerOrder').value);
+            const isActive = document.getElementById('tickerIsActive').checked;
+            
+            if (!messageText) {
+                showNotification('لطفا متن پیام را وارد کنید', 'error');
+                return;
+            }
+            
+            try {
+                const url = id 
+                    ? `${API_BASE}/api/v1/admin/ticker-messages/${id}`
+                    : `${API_BASE}/api/v1/admin/ticker-messages`;
+                
+                const response = await fetch(url, {
+                    method: id ? 'PUT' : 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message_text: messageText,
+                        display_order: displayOrder,
+                        is_active: isActive
+                    })
+                });
+                
+                if (response.ok) {
+                    showNotification(id ? 'پیام با موفقیت ویرایش شد' : 'پیام با موفقیت ایجاد شد', 'success');
+                    closeModal('tickerModal');
+                    loadTickerMessages();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.detail || 'خطا در ذخیره پیام', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving ticker message:', error);
+                showNotification('خطا در ذخیره پیام', 'error');
+            }
+        };
+    }
+}

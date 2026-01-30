@@ -131,6 +131,7 @@ body {
     display: flex;
     align-items: center;
     gap: 16px;
+    overflow: hidden;
 }
 
 .ticker-label {
@@ -141,11 +142,20 @@ body {
     font-weight: 700;
     font-size: 14px;
     animation: pulse 2s infinite;
+    flex-shrink: 0;
+}
+
+.ticker-slider {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
 }
 
 .ticker-text {
     font-weight: 600;
     font-size: 14px;
+    white-space: nowrap;
+    transition: opacity 0.5s ease;
 }
 
 @keyframes pulse {

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from limiter import limiter
-from models import AdvocacyTopic, Country, PoliticalRecipient, RecipientRole, EmailGenerationLog, Campaign
+from models import AdvocacyTopic, Country, PoliticalRecipient, RecipientRole, EmailGenerationLog, Campaign, TickerMessage
 from schemas import (
     CountriesResponse,
     GenerateEmailRequest,
@@ -177,6 +177,18 @@ async def list_campaigns(db: Session = Depends(get_db)):
         })
     
     return {"campaigns": result}
+
+
+@router.get("/ticker-messages")
+async def get_ticker_messages(db: Session = Depends(get_db)):
+    """Get active ticker messages for homepage slider"""
+    messages = db.query(TickerMessage).filter(
+        TickerMessage.is_active.is_(True)
+    ).order_by(TickerMessage.display_order, TickerMessage.created_at.desc()).all()
+    
+    return {
+        "messages": [msg.message_text for msg in messages]
+    }
 
 
 @router.post("/generate-email", response_model=GenerateEmailGroupsResponse)

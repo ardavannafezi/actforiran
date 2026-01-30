@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عمل برای ایران | حمایت جهانی از انقلاب ۲۰۲۶</title>
-    <meta name="description" content="پلتفرم اقدام برای انقلاب ۲۰۲۶ ایران — ارسال ایمیل هدفمند به مقامات و مسئولان کشورهای مختلف برای حمایت بین‌المللی از مردم ایران.">
-    <meta name="keywords" content="انقلاب ۲۰۲۶ ایران, حمایت بین‌المللی, ارسال ایمیل به سیاستمداران, عمل برای ایران, کمپین حمایت از ایران">
-    <meta property="og:title" content="عمل برای ایران | حمایت جهانی از انقلاب ۲۰۲۶">
-    <meta property="og:description" content="با چند کلیک، ایمیل‌های هدفمند برای حمایت از انقلاب ۲۰۲۶ ایران به سیاستمداران و مقامات ارسال کنید.">
+    <title>عمل برای ایران | Make Iran Great Again</title>
+    <meta name="description" content="پلتفرم اقدام برای ایران — ارسال ایمیل هدفمند به مقامات و مسئولان کشورهای مختلف برای حمایت بین‌المللی از مردم ایران.">
+    <meta name="keywords" content="Make Iran Great Again, حمایت بین‌المللی, ارسال ایمیل به سیاستمداران, عمل برای ایران, کمپین حمایت از ایران">
+    <meta property="og:title" content="عمل برای ایران | Make Iran Great Again">
+    <meta property="og:description" content="با چند کلیک، ایمیل‌های هدفمند برای حمایت از ایران به سیاستمداران و مقامات ارسال کنید.">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="fa_IR">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -19,10 +19,10 @@
         <header class="header">
             <div class="header-content">
                 <div class="logo">
-                    <span class="logo-icon">🇮🇷</span>
+                    <img src="https://raw.githubusercontent.com/twitter/twemoji/1c8cbe4759046657da043e897b0ab8105b443c80/assets/svg/1f1ee-1f1f7.svg" alt="Iran Flag" class="logo-icon" style="width: 40px; height: 40px;">
                     <div class="logo-text">
                         <strong>عمل برای ایران</strong>
-                        <small>انقلاب ۲۰۲۶</small>
+                        <small>Make Iran Great Again</small>
                     </div>
                 </div>
                 <nav class="nav">
@@ -34,29 +34,31 @@
         <!-- Breaking News Ticker -->
         <div class="ticker">
             <span class="ticker-label">فوری</span>
-            <p class="ticker-text">مرکز رسمی حمایت بین‌المللی — صدای شما به گوش جهان می‌رسد</p>
+            <div class="ticker-slider">
+                <p class="ticker-text" id="tickerText">مرکز رسمی حمایت بین‌المللی — صدای شما به گوش جهان می‌رسد</p>
+            </div>
         </div>
 
         <!-- Main Content -->
         <main class="main">
             <!-- Hero Section -->
             <section class="hero">
-                <h1>صدای شما را به جهان برسانید</h1>
-                <p>با ارسال ایمیل به سیاستمداران جهان، از حقوق مردم ایران دفاع کنید</p>
+                <h1>وقتی متحد باشیم، جهان صدای ما را می‌شنود</h1>
+                <p>صدای ایرانیا را به جهان برسانید</p>
                 
                 <!-- Choice: Campaign or Custom -->
                 <div class="choice-section" id="choiceSection">
                     <div class="choice-cards">
                         <div class="choice-card" id="campaignChoice">
-                            <div class="choice-icon">🔥</div>
-                            <h3>پیوستن به کمپین</h3>
+                            <div class="choice-icon"><img src="https://raw.githubusercontent.com/twitter/twemoji/1c8cbe4759046657da043e897b0ab8105b443c80/assets/svg/1f1ee-1f1f7.svg" alt="Iran" style="width: 80px; height: 80px;"></div>
+                            <h3>استفاده از کمپین</h3>
                             <p>از کمپین‌های آماده استفاده کنید</p>
                             <button class="btn btn-secondary">کمپین‌ها را ببینید</button>
                         </div>
                         <div class="choice-card" id="customChoice">
                             <div class="choice-icon">✨</div>
                             <h3>ساخت ایمیل سفارشی</h3>
-                            <p>ایمیل خود را شخصی‌سازی کنید</p>
+                            <p>موضوعاتی که می‌خواهید در موردشان صحبت کنید را انتخاب کنید</p>
                             <button class="btn btn-secondary">شروع کنید</button>
                         </div>
                     </div>
@@ -257,12 +259,42 @@
                 </div>
             </section>
 
-            <!-- Info Cards -->
-            <section class="info-section">
+            <!-- Campaign Results Section -->
+            <section class="info-section" style="margin-top: 60px;">
+                <h2 style="text-align: center; margin-bottom: 40px; font-size: 32px; color: var(--primary);">نتایج کمپین‌های ما</h2>
+                <div class="campaign-results-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; max-width: 1000px; margin: 0 auto;">
+                    <div class="result-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px; border-radius: 16px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                            <img src="https://raw.githubusercontent.com/twitter/twemoji/1c8cbe4759046657da043e897b0ab8105b443c80/assets/svg/1f1ee-1f1f7.svg" alt="Iran" style="width: 40px; height: 40px;">
+                            <span style="font-size: 32px; font-weight: 700;">✅</span>
+                        </div>
+                        <h3 style="font-size: 22px; margin-bottom: 12px; font-weight: 700;">افزودن سپاه به لیست تروریستی اتحادیه اروپا</h3>
+                        <p style="line-height: 1.8; opacity: 0.95;">این موفقیت بزرگ با ارسال هزاران ایمیل و تماس‌های مستقیم با اعضای پارلمان اروپا به دست آمد. صدای مردم ایران شنیده شد.</p>
+                        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.3);">
+                            <span style="font-size: 14px; opacity: 0.9;">✨ دستاورد تاریخی ملت ایران</span>
+                        </div>
+                    </div>
+                    <div class="result-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 32px; border-radius: 16px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                            <img src="https://raw.githubusercontent.com/twitter/twemoji/1c8cbe4759046657da043e897b0ab8105b443c80/assets/svg/1f1ee-1f1f7.svg" alt="Iran" style="width: 40px; height: 40px;">
+                            <span style="font-size: 32px; font-weight: 700;">✅</span>
+                        </div>
+                        <h3 style="font-size: 22px; margin-bottom: 12px; font-weight: 700;">رای مثبت فرانسه و اسپانیا</h3>
+                        <p style="line-height: 1.8; opacity: 0.95;">با فشار مردمی و ارسال پیام‌های متعدد، فرانسه و اسپانیا به طرف ایران آزاد رای مثبت دادند. این پیروزی نشان دهنده قدرت صدای متحد ماست.</p>
+                        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.3);">
+                            <span style="font-size: 14px; opacity: 0.9;">🎯 قدرت اتحاد ایرانیان</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Info Section -->
+            <section class="info-section" style="margin-top: 60px;">
                 <div class="info-card">
-                    <span class="info-icon">📧</span>
+                    <span class="info-icon"><img src="https://raw.githubusercontent.com/twitter/twemoji/1c8cbe4759046657da043e897b0ab8105b443c80/assets/svg/1f1ee-1f1f7.svg" alt="Iran" style="width: 60px; height: 60px;"></span>
                     <h3>ایمیل هوشمند</h3>
                     <p>ایمیل‌های شخصی‌سازی شده با هوش مصنوعی</p>
+                    <p style="margin-top: 12px; font-weight: 600; color: var(--primary);">جاوید شاه</p>
                 </div>
                 <div class="info-card">
                     <span class="info-icon">🌍</span>
@@ -279,7 +311,9 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>© ۲۰۲۶ عمل برای ایران — همه حقوق محفوظ است</p>
+            <p style="margin-bottom: 8px;">Created with ❤️ with love for Iran</p>
+            <p style="font-size: 14px; opacity: 0.8;">Ardavan</p>
+            <p style="margin-top: 16px; font-size: 13px; opacity: 0.7;">© ۲۰۲۶ عمل برای ایران — همه حقوق محفوظ است</p>
         </footer>
     </div>
 

@@ -13,6 +13,7 @@ from models import (
     Country,
     PoliticalRecipient,
     RecipientRole,
+    TickerMessage,
 )
 from schemas import (
     AdminLoginRequest,
@@ -1023,7 +1024,7 @@ async def get_analytics_overview(
 ):
     """Get overall platform analytics"""
     from models import EmailGenerationLog
-    from sqlalchemy import func
+    from sqlalchemy import func, distinct
     
     email_units = func.coalesce(func.array_length(EmailGenerationLog.recipient_ids, 1), 0)
     total_emails = db.query(func.coalesce(func.sum(email_units), 0)).scalar() or 0
@@ -1031,6 +1032,16 @@ async def get_analytics_overview(
         EmailGenerationLog.generation_successful == True
     ).scalar() or 0
     total_requests = db.query(func.count(EmailGenerationLog.id)).scalar() or 0
+    
+    # Count unique users by IP address
+    unique_users = db.query(func.count(distinct(EmailGenerationLog.sender_ip_address))).filter(
+        EmailGenerationLog.sender_ip_address.isnot(None)
+    ).scalar() or 0
+    
+    # Count active campaigns (campaigns with at least one email sent)
+    active_campaigns = db.query(func.count(distinct(EmailGenerationLog.campaign_id))).filter(
+        EmailGenerationLog.campaign_id.isnot(None)
+    ).scalar() or 0
     
     total_recipients = db.query(func.count(PoliticalRecipient.id)).filter(
         PoliticalRecipient.approval_status == "approved"
@@ -1053,7 +1064,9 @@ async def get_analytics_overview(
         "total_recipients": total_recipients,
         "total_topics": total_topics,
         "total_countries": total_countries,
-        "success_rate": round((successful_emails / total_emails * 100) if total_emails > 0 else 0, 2)
+        "unique_users": unique_users,
+        "active_campaigns": active_campaigns,
+        "success_rate": f"{round((successful_emails / total_emails * 100) if total_emails > 0 else 0, 1)}%"
     }
 
 
@@ -1842,3 +1855,152 @@ async def list_pending_campaigns(
         })
     
     return {"pending_campaigns": result}
+
+
+# ============================================
+# TICKER MESSAGE MANAGEMENT (SUPER ADMIN ONLY)
+# ============================================
+
+@router.get("/ticker-messages")
+async def list_ticker_messages(
+    db: Session = Depends(get_db),
+    current_admin: Administrator = Depends(require_super_admin)
+):
+    """List all ticker messages (super admin only)"""
+    messages = db.query(TickerMessage).order_by(
+        TickerMessage.display_order, 
+        TickerMessage.created_at.desc()
+    ).all()
+    
+    return {
+        "ticker_messages": [
+            {
+                "id": msg.id,
+                "message_text": msg.message_text,
+                "is_active": msg.is_active,
+                "display_order": msg.display_order,
+                "created_at": msg.created_at.isoformat() if msg.created_at else None,
+                "updated_at": msg.updated_at.isoformat() if msg.updated_at else None
+            }
+            for msg in messages
+        ]
+    }
+
+
+@router.post("/ticker-messages")
+async def create_ticker_message(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_admin: Administrator = Depends(require_super_admin)
+):
+    """Create a new ticker message (super admin only)"""
+    data = await request.json()
+    message_text = data.get("message_text", "").strip()
+    
+    if not message_text:
+        raise HTTPException(status_code=400, detail="Message text is required")
+    
+    # Get max display_order
+    max_order = db.query(TickerMessage).count()
+    
+    new_message = TickerMessage(
+        message_text=message_text,
+        is_active=data.get("is_active", True),
+        display_order=data.get("display_order", max_order + 1),
+        created_by_admin_id=current_admin.id
+    )
+    
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+    
+    log_action(
+        db,
+        current_admin,
+        "create",
+        "ticker_message",
+        new_message.id,
+        f"Created ticker message: {message_text[:50]}"
+    )
+    
+    return {
+        "id": new_message.id,
+        "message_text": new_message.message_text,
+        "is_active": new_message.is_active,
+        "display_order": new_message.display_order,
+        "created_at": new_message.created_at.isoformat()
+    }
+
+
+@router.put("/ticker-messages/{message_id}")
+async def update_ticker_message(
+    message_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_admin: Administrator = Depends(require_super_admin)
+):
+    """Update a ticker message (super admin only)"""
+    message = db.query(TickerMessage).filter(TickerMessage.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="Ticker message not found")
+    
+    data = await request.json()
+    
+    if "message_text" in data:
+        message_text = data["message_text"].strip()
+        if not message_text:
+            raise HTTPException(status_code=400, detail="Message text cannot be empty")
+        message.message_text = message_text
+    
+    if "is_active" in data:
+        message.is_active = data["is_active"]
+    
+    if "display_order" in data:
+        message.display_order = data["display_order"]
+    
+    db.commit()
+    db.refresh(message)
+    
+    log_action(
+        db,
+        current_admin,
+        "update",
+        "ticker_message",
+        message.id,
+        f"Updated ticker message: {message.message_text[:50]}"
+    )
+    
+    return {
+        "id": message.id,
+        "message_text": message.message_text,
+        "is_active": message.is_active,
+        "display_order": message.display_order,
+        "updated_at": message.updated_at.isoformat()
+    }
+
+
+@router.delete("/ticker-messages/{message_id}")
+async def delete_ticker_message(
+    message_id: int,
+    db: Session = Depends(get_db),
+    current_admin: Administrator = Depends(require_super_admin)
+):
+    """Delete a ticker message (super admin only)"""
+    message = db.query(TickerMessage).filter(TickerMessage.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="Ticker message not found")
+    
+    message_text = message.message_text
+    db.delete(message)
+    db.commit()
+    
+    log_action(
+        db,
+        current_admin,
+        "delete",
+        "ticker_message",
+        message_id,
+        f"Deleted ticker message: {message_text[:50]}"
+    )
+    
+    return {"message": "Ticker message deleted successfully"}

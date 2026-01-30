@@ -780,3 +780,58 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('❌ Start button not found!');
     }
 });
+
+// ============================================
+// TICKER SLIDER
+// ============================================
+let tickerMessages = [];
+let currentTickerIndex = 0;
+
+async function loadTickerMessages() {
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/ticker-messages`);
+        if (response.ok) {
+            const data = await response.json();
+            tickerMessages = data.messages || [];
+            if (tickerMessages.length > 0) {
+                // Display first message
+                const tickerText = document.getElementById('tickerText');
+                if (tickerText) {
+                    tickerText.textContent = tickerMessages[0];
+                }
+                // Start slider if multiple messages
+                if (tickerMessages.length > 1) {
+                    startTickerSlider();
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading ticker messages:', error);
+        // Keep default message in HTML if API fails
+    }
+}
+
+function startTickerSlider() {
+    if (tickerMessages.length <= 1) return;
+    
+    setInterval(() => {
+        const tickerText = document.getElementById('tickerText');
+        if (!tickerText) return;
+        
+        // Fade out
+        tickerText.style.opacity = '0';
+        
+        setTimeout(() => {
+            currentTickerIndex = (currentTickerIndex + 1) % tickerMessages.length;
+            tickerText.textContent = tickerMessages[currentTickerIndex];
+            // Fade in
+            tickerText.style.opacity = '1';
+        }, 500);
+    }, 5000); // Change every 5 seconds
+}
+// Load ticker on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadTickerMessages);
+} else {
+    loadTickerMessages();
+}
