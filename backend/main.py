@@ -4,10 +4,8 @@ FastAPI application for generating advocacy emails to politicians
 """
 
 import os
-import re
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -70,23 +68,6 @@ async def add_security_headers(request, call_next):
         "script-src 'self' https://cdn.jsdelivr.net; "
     )
     return response
-
-@app.middleware("http")
-async def enforce_csrf(request, call_next):
-    if request.url.path.startswith("/api/v1/admin") and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
-        if not (request.url.path.endswith("/auth/login") or request.url.path.endswith("/auth/refresh")):
-            cookie_token = request.cookies.get("csrf_token")
-            header_token = request.headers.get("x-csrf-token")
-            if not cookie_token or not header_token or cookie_token != header_token:
-                response = JSONResponse(status_code=403, content={"detail": "CSRF token missing or invalid"})
-                origin = request.headers.get("origin")
-                if origin and (origin in allow_origins or re.match(r"^https://(www\.)?actforiran\.org$", origin)):
-                    response.headers["Access-Control-Allow-Origin"] = origin
-                    response.headers["Vary"] = "Origin"
-                    response.headers["Access-Control-Allow-Credentials"] = "true"
-                    response.headers["Access-Control-Allow-Headers"] = "authorization, content-type, x-csrf-token"
-                return response
-    return await call_next(request)
 
 # Rate limiting
 app.state.limiter = limiter

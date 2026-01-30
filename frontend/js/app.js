@@ -778,6 +778,11 @@ function renderTopics() {
 
         const applySelection = () => {
             if (checkbox.checked) {
+                if (state.selectedTopics.size > 0 && !state.selectedTopics.has(id)) {
+                    checkbox.checked = false;
+                    showNotification('در بخش ایمیل سفارشی فقط یک موضوع می‌توانید انتخاب کنید.', 'warning');
+                    return;
+                }
                 state.selectedTopics.add(id);
                 item.classList.add('selected');
             } else {

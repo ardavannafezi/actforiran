@@ -1,5 +1,4 @@
 from datetime import datetime
-import secrets
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -81,15 +80,7 @@ async def admin_login(payload: AdminLoginRequest, response: Response, db: Sessio
     db.commit()
 
     token = create_access_token(subject=admin.email, role=admin.role)
-    csrf_token = secrets.token_urlsafe(32)
-    response.set_cookie(
-        "csrf_token",
-        csrf_token,
-        httponly=False,
-        samesite="Strict",
-        secure=True,
-    )
-    return {"access_token": token, "token_type": "bearer", "role": admin.role, "csrf_token": csrf_token}
+    return {"access_token": token, "token_type": "bearer", "role": admin.role}
 
 
 @router.post("/auth/refresh", response_model=AdminTokenResponse)
@@ -397,7 +388,7 @@ async def create_recipient(
     if not country:
         raise HTTPException(status_code=400, detail="Invalid country")
 
-    approval_status = "approved" if admin.role == "super_admin" else "pending"
+    approval_status = "approved"
 
     recipient = PoliticalRecipient(
         full_name=payload.full_name,
@@ -476,8 +467,8 @@ async def update_recipient(
         recipient.is_active = payload.is_active
 
     if admin.role != "super_admin":
-        recipient.approval_status = "pending"
-        recipient.approved_by_admin_id = None
+        recipient.approval_status = "approved"
+        recipient.approved_by_admin_id = admin.id
 
     db.add(recipient)
     db.commit()
@@ -626,7 +617,7 @@ async def create_topic(
     if existing:
         raise HTTPException(status_code=400, detail="Slug already exists")
 
-    approval_status = "approved" if admin.role == "super_admin" else "pending"
+    approval_status = "approved"
 
     topic = AdvocacyTopic(
         slug=payload.slug,
@@ -683,8 +674,8 @@ async def update_topic(
         topic.is_active = payload.is_active
 
     if admin.role != "super_admin":
-        topic.approval_status = "pending"
-        topic.approved_by_admin_id = None
+        topic.approval_status = "approved"
+        topic.approved_by_admin_id = admin.id
 
     db.add(topic)
     db.commit()
