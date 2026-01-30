@@ -255,6 +255,15 @@ body {
     margin-bottom: 16px;
 }
 
+.analytics-header,
+.analytics-kpis,
+.analytics-grid,
+.analytics-section {
+    max-width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .analytics-kpis .stat-card {
     color: #fff;
 }
@@ -338,6 +347,13 @@ body {
 }
 
 @media (max-width: 768px) {
+    .analytics-header,
+    .analytics-kpis,
+    .analytics-grid,
+    .analytics-section {
+        max-width: 96%;
+    }
+
     .chart-canvas {
         height: 260px;
     }
