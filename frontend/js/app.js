@@ -306,7 +306,7 @@ async function loadCountries() {
     }
 }
 
-async function handleCountryChange(e) {
+async function handleCountryChange(e, keepSelected = false) {
     const countryCode = e.target.value;
     if (!countryCode) {
         state.selectedCountry = null;
@@ -315,7 +315,9 @@ async function handleCountryChange(e) {
     }
     
     state.selectedCountry = countryCode;
-    state.selectedRecipients.clear();
+    if (!keepSelected) {
+        state.selectedRecipients.clear();
+    }
     state.recipientsPage = 1;
     state.recipientsHasMore = true;
     updateSelectedCountryLabels(countryCode);
@@ -462,27 +464,25 @@ async function selectCampaign(campaignId) {
     // Hide hero, show stepper
     document.querySelector('.hero').style.display = 'none';
     elements.stepperContainer.classList.add('active');
+    showNotification('در حال آماده‌سازی کمپین...', 'info');
     
     // Load data and move to step 3 (residency) since country/recipients/topics are pre-selected
     await loadCountries();
     await loadTopics();
-    
-    // Auto-load recipients for the campaign country
-    
-    // Jump to step 3 (residency/name step)
-    goToStep(3);
-    state.selectedCampaign = campaignId;
-    
-    // Start the stepper with pre-filled data
-    document.querySelector('.hero').style.display = 'none';
-    elements.stepperContainer.classList.add('active');
-    
-    // Load data
-    loadCountries().then(() => {
+
+    if (elements.countrySelect) {
         elements.countrySelect.value = state.selectedCountry;
-        return handleCountryChange({ target: { value: state.selectedCountry } });
-    });
-    loadTopics();
+        await handleCountryChange({ target: { value: state.selectedCountry } }, true);
+    }
+
+    // Ensure campaign selections are applied after recipients/topics load
+    state.selectedRecipients = new Set(campaign.recipient_ids);
+    state.selectedTopics = new Set(campaign.topic_ids);
+    renderRecipients();
+    renderTopics();
+
+    // Jump to step 3 (citizenship/name step)
+    goToStep(3);
     updateCitizenshipCountryVisibility();
     
     showNotification(`کمپین "${campaign.title}" انتخاب شد`, 'info');
