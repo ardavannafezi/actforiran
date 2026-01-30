@@ -289,7 +289,12 @@ async function loadCountries() {
                 <td>${c.code}</td>
                 <td>${c.name}</td>
                 <td>${c.name_persian || '-'}</td>
-                <td>${c.flag || '-'}</td>
+                <td>
+                    <span class="flag-chip">
+                        <span class="flag-emoji">${c.flag || ''}</span>
+                        <span>${c.flag ? 'پرچم' : '-'}</span>
+                    </span>
+                </td>
                 <td><span class="badge ${c.is_active ? 'badge-success' : 'badge-error'}">${c.is_active ? 'فعال' : 'غیرفعال'}</span></td>
                 <td>
                     <button class="btn-icon" onclick="editCountry('${c.code}', '${c.name}', '${c.name_persian || ''}', '${c.flag || ''}', ${c.is_active})" title="ویرایش">✏️</button>

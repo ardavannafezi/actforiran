@@ -346,6 +346,22 @@ body {
     grid-column: 1 / -1;
 }
 
+.flag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+
+.flag-emoji {
+    font-size: 18px;
+    line-height: 1;
+}
+
 @media (max-width: 768px) {
     .analytics-header,
     .analytics-kpis,
