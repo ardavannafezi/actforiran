@@ -3,6 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from database import get_db
 from models import (
@@ -665,6 +666,12 @@ async def update_topic(
         raise HTTPException(status_code=404, detail="Topic not found")
 
     if payload.slug is not None:
+        existing_slug = db.query(AdvocacyTopic).filter(
+            AdvocacyTopic.slug == payload.slug,
+            AdvocacyTopic.id != topic.id
+        ).first()
+        if existing_slug:
+            raise HTTPException(status_code=400, detail="Slug already exists")
         topic.slug = payload.slug
     if payload.display_title is not None:
         topic.display_title = payload.display_title
@@ -678,7 +685,11 @@ async def update_topic(
         topic.approved_by_admin_id = admin.id
 
     db.add(topic)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Slug already exists")
     db.refresh(topic)
 
     log_action(
