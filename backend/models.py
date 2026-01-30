@@ -80,8 +80,9 @@ class AdvocacyTopic(Base):
     slug = Column(String(100), unique=True, nullable=False)
     display_title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
+    recipient_ids = Column(JSONB, nullable=True, default=list)  # Array of recipient IDs for this topic
     is_active = Column(Boolean, default=True)
-    approval_status = Column(String(20), default="pending")
+    approval_status = Column(String(20), default="approved")  # Topics are auto-approved
     created_by_admin_id = Column(Integer, ForeignKey("administrators.id"), nullable=True)
     approved_by_admin_id = Column(Integer, ForeignKey("administrators.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
@@ -98,8 +99,8 @@ class Campaign(Base):
     icon = Column(String(10), nullable=True)  # Emoji icon
     
     # Predefined selections
-    country_code = Column(String(3), ForeignKey("countries.code"), nullable=False)
-    recipient_ids = Column(JSONB, nullable=False)  # Array of recipient IDs
+    country_code = Column(String(3), ForeignKey("countries.code"), nullable=True)  # Optional for backwards compatibility
+    recipient_ids = Column(JSONB, nullable=True, default=list)  # Array of recipient IDs (optional - can get from topics)
     topic_ids = Column(JSONB, nullable=False)  # Array of topic IDs
     
     # Settings

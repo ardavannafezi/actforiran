@@ -351,9 +351,10 @@ async function loadRecipients() {
 
 async function loadTopics() {
     try {
-        const response = await fetch(`${API_BASE}/api/v1/topics`);
-        const data = await response.json();
-        const topics = data.topics || [];
+        const response = await fetch(`${API_BASE}/api/v1/admin/topics`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const topics = await response.json();
         
         const tbody = document.getElementById('topicsTableBody');
         
@@ -367,7 +368,7 @@ async function loadTopics() {
                 <td>${t.display_title}</td>
                 <td><code>${t.slug}</code></td>
                 <td>${t.description || '-'}</td>
-                <td><span class="badge badge-success">فعال</span></td>
+                <td>${toPersian(t.recipient_ids ? t.recipient_ids.length : 0)} گیرنده</td>
                 <td class="actions">
                     <button class="btn btn-secondary btn-sm" onclick="editTopic(${t.id})">ویرایش</button>
                     <button class="btn btn-secondary btn-sm" onclick="deleteTopic(${t.id})">حذف</button>
@@ -481,10 +482,17 @@ async function deleteRecipient(id) {
 }
 
 // Topic Modal
-document.getElementById('addTopicBtn').addEventListener('click', () => {
+document.getElementById('addTopicBtn').addEventListener('click', async () => {
     document.getElementById('topicModalTitle').textContent = 'افزودن موضوع';
     document.getElementById('topicForm').reset();
     document.getElementById('topicId').value = '';
+    
+    // Ensure recipients are loaded
+    if (!recipientsAdmin || recipientsAdmin.length === 0) {
+        await loadRecipients();
+    }
+    
+    renderTopicRecipientsSelector([]);
     openModal('topicModal');
 });
 
@@ -492,10 +500,17 @@ document.getElementById('topicForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const id = document.getElementById('topicId').value;
+    
+    // Get selected recipients
+    const selectedRecipients = Array.from(
+        document.querySelectorAll('#topicRecipientsSelector input[type="checkbox"]:checked')
+    ).map(cb => parseInt(cb.value));
+    
     const payload = {
         display_title: document.getElementById('topicTitle').value,
         slug: document.getElementById('topicSlug').value,
-        description: document.getElementById('topicDescription').value || null
+        description: document.getElementById('topicDescription').value || null,
+        recipient_ids: selectedRecipients
     };
     
     try {
@@ -528,10 +543,44 @@ document.getElementById('topicForm').addEventListener('submit', async (e) => {
     }
 });
 
+function renderTopicRecipientsSelector(selectedIds = []) {
+    const container = document.getElementById('topicRecipientsSelector');
+    if (!container || !recipientsAdmin || recipientsAdmin.length === 0) {
+        if (container) container.innerHTML = '<div style="color: var(--text-secondary);">گیرنده‌ای یافت نشد</div>';
+        return;
+    }
+    
+    container.innerHTML = recipientsAdmin.map(r => `
+        <label style="display: flex; align-items: center; padding: 8px; cursor: pointer; border-radius: 4px; margin-bottom: 4px; background: var(--bg-surface);">
+            <input type="checkbox" value="${r.id}" ${selectedIds.includes(r.id) ? 'checked' : ''} style="margin-left: 8px;">
+            <span style="flex: 1;">${r.full_name} (${r.country_name})</span>
+        </label>
+    `).join('');
+}
+
 async function editTopic(id) {
-    document.getElementById('topicModalTitle').textContent = 'ویرایش موضوع';
-    document.getElementById('topicId').value = id;
-    openModal('topicModal');
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/admin/topics`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const topics = await response.json();
+            const topic = topics.find(t => t.id === id);
+            
+            if (topic) {
+                document.getElementById('topicModalTitle').textContent = 'ویرایش موضوع';
+                document.getElementById('topicId').value = topic.id;
+                document.getElementById('topicTitle').value = topic.display_title;
+                document.getElementById('topicSlug').value = topic.slug;
+                document.getElementById('topicDescription').value = topic.description || '';
+                renderTopicRecipientsSelector(topic.recipient_ids || []);
+                openModal('topicModal');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading topic:', error);
+    }
 }
 
 async function deleteTopic(id) {
@@ -735,15 +784,15 @@ async function openCampaignModal(campaignId = null) {
     const title = document.getElementById('campaignModalTitle');
     const form = document.getElementById('campaignForm');
     
-    // Load recipients and topics for selects
+    // Load topics for select
     await loadAllTopics();
-    await loadRecipientsForCountry();
     
     // Populate topics select
     const topicsSelect = document.getElementById('campaignTopics');
-    topicsSelect.innerHTML = campaignTopics.map(t => 
-        `<option value="${t.id}">${t.display_title}</option>`
-    ).join('');
+    topicsSelect.innerHTML = campaignTopics.map(t => {
+        const recipientCount = t.recipient_ids ? t.recipient_ids.length : 0;
+        return `<option value="${t.id}">${t.display_title} (${toPersian(recipientCount)} گیرنده)</option>`;
+    }).join('');
     
     if (campaignId) {
         // Edit mode
@@ -759,11 +808,6 @@ async function openCampaignModal(campaignId = null) {
         document.getElementById('campaignIsHot').checked = campaign.is_hot;
         document.getElementById('campaignDisplayOrder').value = campaign.display_order || 0;
         
-        // Select recipients
-        Array.from(document.getElementById('campaignRecipients').options).forEach(opt => {
-            opt.selected = campaign.recipient_ids.includes(parseInt(opt.value));
-        });
-        
         // Select topics
         Array.from(document.getElementById('campaignTopics').options).forEach(opt => {
             opt.selected = campaign.topic_ids.includes(parseInt(opt.value));
@@ -773,7 +817,6 @@ async function openCampaignModal(campaignId = null) {
         title.textContent = 'افزودن کمپین';
         form.reset();
         document.getElementById('campaignId').value = '';
-        document.getElementById('campaignRecipients').innerHTML = '';
     }
     
     modal.classList.add('active');
@@ -795,70 +838,13 @@ async function loadAllTopics() {
     }
 }
 
-async function loadRecipientsForCountry() {
-    try {
-        const response = await fetch(`${API_BASE}/api/v1/admin/recipients`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) throw new Error('Failed to load recipients');
-        
-        const data = await response.json();
-        campaignRecipients = Array.isArray(data) ? data : (data.recipients || []);
-        filteredCampaignRecipients = [...campaignRecipients];
-        renderCampaignRecipients('');
-        
-    } catch (error) {
-        console.error('Error loading recipients:', error);
-    }
-}
-
-function renderCampaignRecipients(query) {
-    const recipientsSelect = document.getElementById('campaignRecipients');
-    const search = (query || '').trim().toLowerCase();
-
-    filteredCampaignRecipients = campaignRecipients.filter(r => {
-        const name = (r.full_name || '').toLowerCase();
-        const title = (r.custom_title || r.role_name || '').toLowerCase();
-        const country = (r.country_name || r.country_code || '').toLowerCase();
-        return name.includes(search) || title.includes(search) || country.includes(search);
-    });
-
-    const grouped = filteredCampaignRecipients.reduce((acc, r) => {
-        const key = r.country_name || r.country_code || 'Other';
-        acc[key] = acc[key] || [];
-        acc[key].push(r);
-        return acc;
-    }, {});
-
-    recipientsSelect.innerHTML = Object.keys(grouped).sort().map(country => {
-        const options = grouped[country].map(r =>
-            `<option value="${r.id}">${r.full_name} - ${r.custom_title || r.role_name}</option>`
-        ).join('');
-        return `<optgroup label="${country}">${options}</optgroup>`;
-    }).join('');
-}
-
-// Load recipients without country filter
-document.addEventListener('DOMContentLoaded', () => {
-    loadRecipientsForCountry();
-    const recipientsSearch = document.getElementById('campaignRecipientsSearch');
-    if (recipientsSearch) {
-        recipientsSearch.addEventListener('input', (e) => renderCampaignRecipients(e.target.value));
-    }
-});
+// Removed campaign recipient loading functions - recipients now come from topics
 
 async function saveCampaign(e) {
     e.preventDefault();
     
     const campaignId = document.getElementById('campaignId').value;
-    const recipientIds = Array.from(document.getElementById('campaignRecipients').selectedOptions).map(opt => parseInt(opt.value));
     const topicIds = Array.from(document.getElementById('campaignTopics').selectedOptions).map(opt => parseInt(opt.value));
-    
-    if (recipientIds.length === 0) {
-        showNotification('حداقل یک گیرنده انتخاب کنید', 'error');
-        return;
-    }
     
     if (topicIds.length === 0) {
         showNotification('حداقل یک موضوع انتخاب کنید', 'error');
@@ -870,7 +856,6 @@ async function saveCampaign(e) {
         slug: document.getElementById('campaignSlug').value,
         description: document.getElementById('campaignDescription').value || '',
         icon: document.getElementById('campaignIcon').value || '🔥',
-        recipient_ids: recipientIds,
         topic_ids: topicIds,
         is_hot: document.getElementById('campaignIsHot').checked,
         display_order: parseInt(document.getElementById('campaignDisplayOrder').value) || 0,

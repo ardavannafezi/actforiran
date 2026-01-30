@@ -600,6 +600,7 @@ async def list_topics(
             "slug": t.slug,
             "display_title": t.display_title,
             "description": t.description,
+            "recipient_ids": t.recipient_ids or [],
             "approval_status": t.approval_status,
             "is_active": t.is_active,
         }
@@ -614,43 +615,54 @@ async def create_topic(
     db: Session = Depends(get_db),
     admin: Administrator = Depends(get_current_admin),
 ):
-    existing = db.query(AdvocacyTopic).filter(AdvocacyTopic.slug == payload.slug).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Slug already exists")
+    try:
+        existing = db.query(AdvocacyTopic).filter(AdvocacyTopic.slug == payload.slug).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Slug already exists")
 
-    approval_status = "approved"
+        approval_status = "approved"
 
-    topic = AdvocacyTopic(
-        slug=payload.slug,
-        display_title=payload.display_title,
-        description=payload.description,
-        approval_status=approval_status,
-        created_by_admin_id=admin.id,
-        approved_by_admin_id=admin.id if approval_status == "approved" else None,
-    )
-    db.add(topic)
-    db.commit()
-    db.refresh(topic)
+        topic = AdvocacyTopic(
+            slug=payload.slug,
+            display_title=payload.display_title,
+            description=payload.description,
+            recipient_ids=payload.recipient_ids if hasattr(payload, 'recipient_ids') else [],
+            approval_status=approval_status,
+            created_by_admin_id=admin.id,
+            approved_by_admin_id=admin.id if approval_status == "approved" else None,
+        )
+        db.add(topic)
+        db.commit()
+        db.refresh(topic)
 
-    log_action(
-        db,
-        admin,
-        "CREATE_TOPIC",
-        "advocacy_topic",
-        topic.id,
-        {"slug": topic.slug},
-        request,
-    )
-    db.commit()
+        log_action(
+            db,
+            admin,
+            "CREATE_TOPIC",
+            "advocacy_topic",
+            topic.id,
+            {"slug": topic.slug},
+            request,
+        )
+        db.commit()
 
-    return {
-        "id": topic.id,
-        "slug": topic.slug,
-        "display_title": topic.display_title,
-        "description": topic.description,
-        "approval_status": topic.approval_status,
-        "is_active": topic.is_active,
-    }
+        return {
+            "id": topic.id,
+            "slug": topic.slug,
+            "display_title": topic.display_title,
+            "description": topic.description,
+            "recipient_ids": topic.recipient_ids or [],
+            "approval_status": topic.approval_status,
+            "is_active": topic.is_active,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating topic: {e}")
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create topic: {str(e)}")
 
 
 @router.put("/topics/{topic_id}", response_model=AdvocacyTopicAdminOut)
@@ -679,10 +691,12 @@ async def update_topic(
         topic.description = payload.description
     if payload.is_active is not None:
         topic.is_active = payload.is_active
+    if hasattr(payload, 'recipient_ids') and payload.recipient_ids is not None:
+        topic.recipient_ids = payload.recipient_ids
 
-    if admin.role != "super_admin":
-        topic.approval_status = "approved"
-        topic.approved_by_admin_id = admin.id
+    # Topics are always auto-approved (no approval workflow)
+    topic.approval_status = "approved"
+    topic.approved_by_admin_id = admin.id
 
     db.add(topic)
     try:
@@ -708,6 +722,7 @@ async def update_topic(
         "slug": topic.slug,
         "display_title": topic.display_title,
         "description": topic.description,
+        "recipient_ids": topic.recipient_ids or [],
         "approval_status": topic.approval_status,
         "is_active": topic.is_active,
     }

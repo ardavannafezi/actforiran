@@ -524,6 +524,18 @@ def run_migrations(db: Session):
     except Exception as e:
         print(f"   ⚠️  Could not check political_recipients.media_outlets: {e}")
     
+    # Auto-approve all existing topics (topics don't need approval)
+    try:
+        result = db.execute(text("""
+            SELECT COUNT(*) FROM advocacy_topics WHERE approval_status = 'pending'
+        """))
+        pending_count = result.fetchone()[0]
+        if pending_count > 0:
+            migrations.append("UPDATE advocacy_topics SET approval_status = 'approved' WHERE approval_status = 'pending'")
+            print(f"   ➕ Need to auto-approve {pending_count} pending topics")
+    except Exception as e:
+        print(f"   ⚠️  Could not check advocacy_topics: {e}")
+    
     # Run migrations
     if migrations:
         print(f"🔧 Running {len(migrations)} migration(s)...")

@@ -42,7 +42,7 @@
             <!-- Header -->
             <header class="admin-header">
                 <div class="logo">
-                    <span class="logo-icon">AFI</span>
+                    <img src="https://raw.githubusercontent.com/twitter/twemoji/1c8cbe4759046657da043e897b0ab8105b443c80/assets/svg/1f1ee-1f1f7.svg" alt="Iran Flag" class="logo-icon" style="width: 40px; height: 40px;">
                     <div class="logo-text">
                         <strong>پنل مدیریت</strong>
                         <small>ActForIran</small>
@@ -133,12 +133,13 @@
                                 <th>عنوان</th>
                                 <th>شناسه</th>
                                 <th>توضیحات</th>
+                                <th>تعداد گیرندگان</th>
                                 <th>وضعیت</th>
                                 <th>عملیات</th>
                             </tr>
                         </thead>
                         <tbody id="topicsTableBody">
-                            <tr><td colspan="5" class="loading">در حال بارگذاری...</td></tr>
+                            <tr><td colspan="6" class="loading">در حال بارگذاری...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -207,7 +208,7 @@
                                 <th>پیام</th>
                                 <th>وضعیت</th>
                                 <th>ترتیب نمایش</th>
-                                <th>تاریخ ایجاد</th>
+                                <th>گیرندگان</th>
                                 <th>عملیات</th>
                             </tr>
                         </thead>
@@ -382,6 +383,12 @@
                         <label>توضیحات</label>
                         <textarea id="topicDescription" class="form-textarea" rows="4"></textarea>
                     </div>
+                    <div class="form-group">
+                        <label>گیرندگان (Recipients)</label>
+                        <div id="topicRecipientsSelector" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                            <div style="color: var(--text-secondary);">در حال بارگذاری...</div>
+                        </div>
+                    </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">ذخیره</button>
                 </form>
             </div>
@@ -413,17 +420,10 @@
                         <input type="text" id="campaignIcon" class="form-input" placeholder="🔥">
                     </div>
                     <div class="form-group">
-                        <label>گیرندگان (چند انتخابی)</label>
-                        <input type="text" id="campaignRecipientsSearch" class="form-input" placeholder="جستجو در گیرندگان...">
-                        <select id="campaignRecipients" class="form-input" multiple size="6">
+                        <label>موضوعات (چند انتخابی) - گیرندگان از موضوعات گرفته می‌شوند</label>
+                        <select id="campaignTopics" class="form-input" multiple size="6" required>
                         </select>
-                        <small style="color: var(--text-secondary);">با Ctrl/Cmd کلیک چند گزینه انتخاب کنید</small>
-                    </div>
-                    <div class="form-group">
-                        <label>موضوعات (چند انتخابی)</label>
-                        <select id="campaignTopics" class="form-input" multiple size="6">
-                        </select>
-                        <small style="color: var(--text-secondary);">با Ctrl/Cmd کلیک چند گزینه انتخاب کنید</small>
+                        <small style="color: var(--text-secondary);">با Ctrl/Cmd کلیک چند گزینه انتخاب کنید. گیرندگان بر اساس موضوعات انتخاب می‌شوند.</small>
                     </div>
                     <div class="form-group">
                         <label>
