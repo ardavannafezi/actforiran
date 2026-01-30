@@ -749,15 +749,27 @@ function renderTopics() {
         return;
     }
     
-    elements.topicsList.innerHTML = state.topics.map(topic => `
+    const maxDescLength = 220;
+    elements.topicsList.innerHTML = state.topics.map(topic => {
+        const hasDesc = !!topic.description;
+        const fullDesc = topic.description || '';
+        const isLong = hasDesc && fullDesc.length > maxDescLength;
+        const shortDesc = isLong ? `${fullDesc.slice(0, maxDescLength).trim()}…` : fullDesc;
+        return `
         <label class="checkbox-item ${state.selectedTopics.has(topic.id) ? 'selected' : ''}" data-id="${topic.id}">
             <input type="checkbox" ${state.selectedTopics.has(topic.id) ? 'checked' : ''}>
             <div class="item-content">
                 <div class="item-title">${topic.display_title}</div>
-                ${topic.description ? `<div class="item-subtitle">${topic.description}</div>` : ''}
+                ${hasDesc ? `
+                <div class="item-subtitle" data-full="${fullDesc.replace(/"/g, '&quot;')}" data-short="${shortDesc.replace(/"/g, '&quot;')}">
+                    ${shortDesc}
+                </div>
+                ${isLong ? `<button type="button" class="topic-toggle">بیشتر</button>` : ''}
+                ` : ''}
             </div>
         </label>
-    `).join('');
+    `;
+    }).join('');
     
     // Add event listeners (iOS-friendly)
     elements.topicsList.querySelectorAll('.checkbox-item').forEach(item => {
@@ -785,6 +797,19 @@ function renderTopics() {
 
         item.addEventListener('click', toggleFromCard);
         item.addEventListener('touchend', toggleFromCard, { passive: false });
+    });
+
+    elements.topicsList.querySelectorAll('.topic-toggle').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const subtitle = btn.closest('.item-content')?.querySelector('.item-subtitle');
+            if (!subtitle) return;
+            const isExpanded = btn.dataset.expanded === 'true';
+            subtitle.textContent = isExpanded ? subtitle.dataset.short : subtitle.dataset.full;
+            btn.textContent = isExpanded ? 'بیشتر' : 'کمتر';
+            btn.dataset.expanded = isExpanded ? 'false' : 'true';
+        });
     });
 }
 

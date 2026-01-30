@@ -83,6 +83,8 @@ async def enforce_csrf(request, call_next):
                 if origin and (origin in allow_origins or re.match(r"^https://(www\.)?actforiran\.org$", origin)):
                     response.headers["Access-Control-Allow-Origin"] = origin
                     response.headers["Vary"] = "Origin"
+                    response.headers["Access-Control-Allow-Credentials"] = "true"
+                    response.headers["Access-Control-Allow-Headers"] = "authorization, content-type, x-csrf-token"
                 return response
     return await call_next(request)
 

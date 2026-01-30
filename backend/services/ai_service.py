@@ -44,7 +44,8 @@ def _build_prompt(
         "- First paragraph: NEVER state the demand. Only identify sender and state why writing at high level\n"
         "- 1 short intro sentence (identify as individual constituent)\n"
         "- 2-3 short paragraphs, maximum 3 lines each\n"
-        "- Frame request as question about authority or process (e.g., 'I am asking whether your office has the authority to ___ under existing law')\n"
+        "- Do NOT frame the request as an authority check (avoid phrases like 'authority to', 'whether your agencies have the authority to')\n"
+        "- Ask for specific actions clearly and directly in the final paragraph\n"
         "- 1 clear ask in a single sentence at the end\n"
         "- Simple sign-off (Respectfully, Sincerely) with sender name ONLY if provided\n\n"
         "LINKS:\n"
@@ -80,7 +81,7 @@ def _build_prompt(
         "CRITICAL REQUIREMENTS:\n"
         "1. Subject must sound like an administrative inquiry, not a campaign demand\n"
         "2. First paragraph must NOT contain the ask - only identify sender and general context\n"
-        "3. Frame the core request as a question about government authority or existing mechanisms\n"
+        "3. Ask for specific actions directly; do NOT ask about authority or capability\n"
         "4. Use cold administrative language - avoid all emotional or moral framing\n"
         "5. Keep paragraphs very short (2-3 lines maximum)\n"
         "6. If news sources mentioned in topics, cite agency name and title without links\n"
@@ -100,9 +101,6 @@ def _parse_subject_body(text: str) -> Tuple[str, str]:
     subject = lines[0]
     if subject.lower().startswith("subject:"):
         subject = subject[8:].strip()
-    
-    if len(subject) > 78:
-        subject = subject[:75] + "..."
     
     body = "\n".join(lines[1:]) if len(lines) > 1 else ""
     return subject, body
@@ -186,9 +184,6 @@ async def generate_email(
             raise AIServiceError("OpenAI returned empty response")
             
         subject, body = _parse_subject_body(content)
-
-        if len(subject) > 60:
-            subject = subject[:60].rstrip()
 
         usage = data.get("usage", {})
         total_tokens = usage.get("total_tokens", 0)

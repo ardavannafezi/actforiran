@@ -828,6 +828,20 @@ body {
     color: var(--text-secondary);
 }
 
+.checkbox-item .topic-toggle {
+    margin-top: 6px;
+    background: transparent;
+    border: none;
+    color: var(--accent-red);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.checkbox-item .topic-toggle:hover {
+    text-decoration: underline;
+}
+
 /* Radio Group */
 .radio-group {
     display: flex;
