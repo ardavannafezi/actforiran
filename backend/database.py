@@ -117,6 +117,7 @@ def seed_defaults(db):
     pm_role = db.query(RecipientRole).filter_by(name="Prime Minister").first()
     president_role = db.query(RecipientRole).filter_by(name="President").first()
     fm_role = db.query(RecipientRole).filter_by(name="Foreign Minister").first()
+    fm_ministry_role = db.query(RecipientRole).filter_by(name="Foreign Ministry").first()
     sos_role = db.query(RecipientRole).filter_by(name="Secretary of State").first()
     chancellor_role = db.query(RecipientRole).filter_by(name="Chancellor").first()
     
@@ -146,17 +147,90 @@ def seed_defaults(db):
         {"full_name": "Anthony Albanese", "email_address": "anthony.albanese@pm.gov.au", "role_id": pm_role.id, "country_code": "AUS"},
         {"full_name": "Penny Wong", "email_address": "penny.wong@dfat.gov.au", "role_id": fm_role.id, "country_code": "AUS"}
     ]
+
+    # Additional EU leaders (provided list, verified public emails)
+    extra_recipients = [
+        {"full_name": "Christian Stocker", "email_address": "service@bka.gv.at", "role_id": pm_role.id, "country_code": "AUT"},
+        {"full_name": "Bart De Wever", "email_address": "contact@premier.be", "role_id": pm_role.id, "country_code": "BEL"},
+        {"full_name": "Rossen Jeliazkov", "email_address": "gis@government.bg", "role_id": pm_role.id, "country_code": "BGR"},
+        {"full_name": "Andrej Plenković", "email_address": "gradjani@vlada.hr", "role_id": pm_role.id, "country_code": "HRV"},
+        {"full_name": "Andrej Babiš", "email_address": "posta@vlada.gov.cz", "role_id": pm_role.id, "country_code": "CZE"},
+        {"full_name": "Mette Frederiksen", "email_address": "stm@stm.dk", "role_id": pm_role.id, "country_code": "DNK"},
+        {"full_name": "Kristen Michal", "email_address": "riigikantselei@riigikantselei.ee", "role_id": pm_role.id, "country_code": "EST"},
+        {"full_name": "Petteri Orpo", "email_address": "kirjaamo@vnk.fi", "role_id": pm_role.id, "country_code": "FIN"},
+        {"full_name": "Friedrich Merz", "email_address": "poststelle@bk.bund.de", "role_id": chancellor_role.id, "country_code": "DEU"},
+        {"full_name": "Kyriakos Mitsotakis", "email_address": "primeminister@primeminister.gr", "role_id": pm_role.id, "country_code": "GRC"},
+        {"full_name": "Viktor Orbán", "email_address": "orbanviktor@orbanviktor.hu", "role_id": pm_role.id, "country_code": "HUN"},
+        {"full_name": "Micheál Martin", "email_address": "info@taoiseach.gov.ie", "role_id": pm_role.id, "country_code": "IRL"},
+        {"full_name": "Giorgia Meloni", "email_address": "chigicomunicazione@governo.it", "role_id": pm_role.id, "country_code": "ITA"},
+        {"full_name": "Giorgia Meloni", "email_address": "presidente@pec.governo.it", "role_id": pm_role.id, "country_code": "ITA"},
+        {"full_name": "Evika Siliņa", "email_address": "ieva.ziberga@mk.gov.lv", "role_id": pm_role.id, "country_code": "LVA"},
+        {"full_name": "Luc Frieden", "email_address": "ministere.etat@me.etat.lu", "role_id": pm_role.id, "country_code": "LUX"},
+        {"full_name": "Robert Abela", "email_address": "info.pps@gov.mt", "role_id": pm_role.id, "country_code": "MLT"},
+        {"full_name": "Robert Abela", "email_address": "foi.opm@gov.mt", "role_id": pm_role.id, "country_code": "MLT"},
+        {"full_name": "Donald Tusk", "email_address": "kontakt@kprm.gov.pl", "role_id": pm_role.id, "country_code": "POL"},
+        {"full_name": "Luís Montenegro", "email_address": "gabinete.pm@pm.gov.pt", "role_id": pm_role.id, "country_code": "PRT"},
+        {"full_name": "Robert Fico", "email_address": "premier@vlada.gov.sk", "role_id": pm_role.id, "country_code": "SVK"},
+        {"full_name": "Robert Golob", "email_address": "gp.kpv@gov.si", "role_id": pm_role.id, "country_code": "SVN"},
+        {"full_name": "Ulf Kristersson", "email_address": "statsradsberedningen.registrator@regeringskansliet.se", "role_id": pm_role.id, "country_code": "SWE"},
+        {"full_name": "Nikos Christodoulides", "email_address": "info@presidency.gov.cy", "role_id": president_role.id, "country_code": "CYP"},
+        {"full_name": "Gitanas Nausėda", "email_address": "kanceliarija@president.lt", "role_id": president_role.id, "country_code": "LTU"},
+        {"full_name": "Nicușor Dan", "email_address": "procetatean@presidency.ro", "role_id": president_role.id, "country_code": "ROU"}
+    ]
+
+    # Foreign ministries (institutional contacts)
+    if fm_ministry_role:
+        extra_recipients.extend([
+            {"full_name": "Federal Ministry for European and International Affairs", "email_address": "post@bmeia.gv.at", "role_id": fm_ministry_role.id, "country_code": "AUT"},
+            {"full_name": "Federal Public Service Foreign Affairs", "email_address": "contact@diplomatie.belgium.be", "role_id": fm_ministry_role.id, "country_code": "BEL"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "mfa@mfa.bg", "role_id": fm_ministry_role.id, "country_code": "BGR"},
+            {"full_name": "Ministry of Foreign and European Affairs", "email_address": "info@mvep.hr", "role_id": fm_ministry_role.id, "country_code": "HRV"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "epodatelna@mzv.cz", "role_id": fm_ministry_role.id, "country_code": "CZE"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "um@um.dk", "role_id": fm_ministry_role.id, "country_code": "DNK"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "info@mfa.ee", "role_id": fm_ministry_role.id, "country_code": "EST"},
+            {"full_name": "Ministry for Foreign Affairs", "email_address": "kirjaamo.um@gov.fi", "role_id": fm_ministry_role.id, "country_code": "FIN"},
+            {"full_name": "Federal Foreign Office", "email_address": "poststelle@auswaertiges-amt.de", "role_id": fm_ministry_role.id, "country_code": "DEU"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "info@mfa.gr", "role_id": fm_ministry_role.id, "country_code": "GRC"},
+            {"full_name": "Ministry of Foreign Affairs and Trade", "email_address": "info@mfa.gov.hu", "role_id": fm_ministry_role.id, "country_code": "HUN"},
+            {"full_name": "Department of Foreign Affairs", "email_address": "correspondence@dfa.ie", "role_id": fm_ministry_role.id, "country_code": "IRL"},
+            {"full_name": "Ministry of Foreign Affairs and International Cooperation", "email_address": "urp@esteri.it", "role_id": fm_ministry_role.id, "country_code": "ITA"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "info@mfa.gov.lv", "role_id": fm_ministry_role.id, "country_code": "LVA"},
+            {"full_name": "Ministry of Foreign and European Affairs", "email_address": "info.mae@mae.etat.lu", "role_id": fm_ministry_role.id, "country_code": "LUX"},
+            {"full_name": "Ministry for Foreign and European Affairs", "email_address": "foreignaffairs@gov.mt", "role_id": fm_ministry_role.id, "country_code": "MLT"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "minbuza@minbuza.nl", "role_id": fm_ministry_role.id, "country_code": "NLD"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "kancelaria@mfa.gov.pl", "role_id": fm_ministry_role.id, "country_code": "POL"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "mne@mne.pt", "role_id": fm_ministry_role.id, "country_code": "PRT"},
+            {"full_name": "Ministry of Foreign and European Affairs", "email_address": "podatelna@mzv.sk", "role_id": fm_ministry_role.id, "country_code": "SVK"},
+            {"full_name": "Ministry of Foreign and European Affairs", "email_address": "gp.mzz@gov.si", "role_id": fm_ministry_role.id, "country_code": "SVN"},
+            {"full_name": "Ministry of Foreign Affairs, EU and Cooperation", "email_address": "informacion.maec@maec.es", "role_id": fm_ministry_role.id, "country_code": "ESP"},
+            {"full_name": "Ministry for Foreign Affairs", "email_address": "ud.registrator@gov.se", "role_id": fm_ministry_role.id, "country_code": "SWE"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "info@mfa.gov.cy", "role_id": fm_ministry_role.id, "country_code": "CYP"},
+            {"full_name": "Ministry for Europe and Foreign Affairs", "email_address": "contact.diplomatie@diplomatie.gouv.fr", "role_id": fm_ministry_role.id, "country_code": "FRA"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "urm@urm.lt", "role_id": fm_ministry_role.id, "country_code": "LTU"},
+            {"full_name": "Ministry of Foreign Affairs", "email_address": "comunicare@mae.ro", "role_id": fm_ministry_role.id, "country_code": "ROU"}
+        ])
+    else:
+        print("⚠️ Foreign Ministry role missing; skipping foreign ministry contacts")
+
+    recipients_data.extend(extra_recipients)
     
-    if db.query(PoliticalRecipient).count() == 0:
-        for recipient_data in recipients_data:
-            recipient = PoliticalRecipient(
-                **recipient_data,
-                is_active=True,
-                approval_status="approved",
-                created_by_admin_id=super_admin.id,
-                approved_by_admin_id=super_admin.id
-            )
-            db.add(recipient)
+    existing_emails = {
+        r.email_address.lower()
+        for r in db.query(PoliticalRecipient.email_address).all()
+        if r.email_address
+    }
+    for recipient_data in recipients_data:
+        email = recipient_data.get("email_address", "").lower()
+        if not email or email in existing_emails:
+            continue
+        recipient = PoliticalRecipient(
+            **recipient_data,
+            is_active=True,
+            approval_status="approved",
+            created_by_admin_id=super_admin.id,
+            approved_by_admin_id=super_admin.id
+        )
+        db.add(recipient)
     
     # Create advocacy topics
     topics_data = [

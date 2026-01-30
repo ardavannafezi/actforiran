@@ -512,7 +512,7 @@ async function sendEmailGroup(index) {
     const body = bodyInput ? bodyInput.value : group.body;
 
     const emails = group.recipients.map(r => r.email).join(',');
-    const mailto = `mailto:${emails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const mailto = `mailto:?bcc=${encodeURIComponent(emails)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
     // Log analytics only on send click
     try {
