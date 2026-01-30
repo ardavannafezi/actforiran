@@ -42,8 +42,6 @@ const elements = {
     topicsList: document.getElementById('topicsList'),
     userName: document.getElementById('userName'),
     emailGroups: document.getElementById('emailGroups'),
-    selectedCountryLabel: document.getElementById('selectedCountryLabel'),
-    selectedCountryInline: document.getElementById('selectedCountryInline'),
     citizenshipCountryGroup: document.getElementById('citizenshipCountryGroup'),
     citizenshipCountrySelect: document.getElementById('citizenshipCountrySelect')
 };
@@ -492,16 +490,26 @@ async function selectCampaign(campaignId) {
 
 async function generateEmail() {
     const userName = elements.userName ? elements.userName.value.trim() : '';
+    if (!state.citizenshipStatus) {
+        showNotification('لطفاً وضعیت شهروندی خود را مشخص کنید', 'error');
+        return;
+    }
+    if (state.campaignMode && state.citizenshipStatus === 'selected_country_citizen' && !state.citizenshipCountry) {
+        showNotification('لطفاً کشور شهروندی/اقامت خود را انتخاب کنید', 'error');
+        return;
+    }
     
     const payload = {
         country_code: state.selectedCountry,
         recipient_ids: Array.from(state.selectedRecipients),
         topic_ids: Array.from(state.selectedTopics),
         sender_citizenship_status: state.citizenshipStatus,
-        sender_citizenship_country_code: state.citizenshipCountry,
         user_name: userName || null,
         campaign_id: state.selectedCampaign || null
     };
+    if (state.citizenshipCountry) {
+        payload.sender_citizenship_country_code = state.citizenshipCountry;
+    }
     
     try {
         if (elements.emailGroups) {
@@ -515,8 +523,16 @@ async function generateEmail() {
         });
         
         if (!response.ok) {
+        let errorDetail = 'Failed to generate email';
+        try {
             const error = await response.json();
-            throw new Error(error.detail || 'Failed to generate email');
+            if (error && error.detail) {
+                errorDetail = typeof error.detail === 'string' ? error.detail : JSON.stringify(error.detail);
+            }
+        } catch (e) {
+            // ignore JSON parse errors
+        }
+        throw new Error(errorDetail);
         }
         
         const data = await response.json();
@@ -545,20 +561,24 @@ async function sendEmailGroup(index) {
 
     // Log analytics only on send click
     try {
+        const logPayload = {
+            country_code: state.selectedCountry,
+            recipient_ids: group.recipient_ids,
+            topic_ids: Array.from(state.selectedTopics),
+            sender_citizenship_status: state.citizenshipStatus,
+            user_name: elements.userName ? elements.userName.value.trim() : null,
+            campaign_id: state.selectedCampaign || null,
+            subject,
+            body
+        };
+        if (state.citizenshipCountry) {
+            logPayload.sender_citizenship_country_code = state.citizenshipCountry;
+        }
+
         await fetch(`${API_BASE}/api/v1/log-email-send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                country_code: state.selectedCountry,
-                recipient_ids: group.recipient_ids,
-                topic_ids: Array.from(state.selectedTopics),
-                sender_citizenship_status: state.citizenshipStatus,
-                sender_citizenship_country_code: state.citizenshipCountry,
-                user_name: elements.userName ? elements.userName.value.trim() : null,
-                campaign_id: state.selectedCampaign || null,
-                subject,
-                body
-            })
+            body: JSON.stringify(logPayload)
         });
     } catch (error) {
         console.error('Error logging email send:', error);
