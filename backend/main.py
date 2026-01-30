@@ -7,6 +7,7 @@ import os
 import re
 import uvicorn
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -49,6 +50,36 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=3600,
 )
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; "
+        "base-uri 'none'; "
+        "frame-ancestors 'none'; "
+        "img-src 'self' data:; "
+        "connect-src 'self' https://back.actforiran.org https://actforiran.org; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "script-src 'self' https://cdn.jsdelivr.net; "
+    )
+    return response
+
+@app.middleware("http")
+async def enforce_csrf(request, call_next):
+    if request.url.path.startswith("/api/v1/admin") and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        if not (request.url.path.endswith("/auth/login") or request.url.path.endswith("/auth/refresh")):
+            cookie_token = request.cookies.get("csrf_token")
+            header_token = request.headers.get("x-csrf-token")
+            if not cookie_token or not header_token or cookie_token != header_token:
+                return JSONResponse(status_code=403, content={"detail": "CSRF token missing or invalid"})
+    return await call_next(request)
 
 # Rate limiting
 app.state.limiter = limiter

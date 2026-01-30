@@ -171,7 +171,7 @@
                         
                         <label style="display: block; margin-bottom: 12px; font-weight: 600;">وضعیت شهروندی</label>
                         <p style="margin-bottom: 16px; color: var(--text-secondary); font-size: 14px;">
-                            لطفاً وضعیت شهروندی خود را نسبت به <span id="selectedCountryLabel">این کشور</span> مشخص کنید
+                            لطفاً وضعیت شهروندی خود را مشخص کنید
                         </p>
                         <div class="radio-group">
                             <label class="radio-card">
@@ -192,9 +192,15 @@
                                 <input type="radio" name="citizenship_status" value="selected_country_citizen">
                                 <div class="radio-content">
                                     <span class="radio-icon">🏛️</span>
-                                    <span class="radio-label">شهروند/مقیم <span id="selectedCountryInline">این کشور</span> هستم</span>
+                                    <span class="radio-label">شهروند/مقیم یک کشور دیگر هستم</span>
                                 </div>
                             </label>
+                        </div>
+                        <div class="form-group" id="citizenshipCountryGroup" style="margin-top: 16px; display: none;">
+                            <label>کشور شهروندی/اقامت</label>
+                            <select id="citizenshipCountrySelect" class="form-select">
+                                <option value="">انتخاب کنید...</option>
+                            </select>
                         </div>
                     </div>
 
@@ -307,7 +313,7 @@
                 </div>
                 <div class="info-card">
                     <span class="info-icon"><img src="https://raw.githubusercontent.com/twitter/twemoji/1c8cbe4759046657da043e897b0ab8105b443c80/assets/svg/1f1ee-1f1f7.svg" alt="Iran" style="width: 60px; height: 60px;"></span>
-                    <h3>حمایت از ایران</h3>
+                    <h3>حمایت از ایرiان</h3>
                     <p style="font-weight: 600; color: var(--primary);">جاوید شاه</p>
                 </div>
             </section>
@@ -316,7 +322,7 @@
         <!-- Footer -->
         <footer class="footer">
             <p style="margin-bottom: 8px;">Created with ❤️ with love for Iran</p>
-            <p style="font-size: 14px; opacity: 0.8;">Ardavan</p>
+            <p style="font-size: 14px; opacity: 0.8;">Ar.</p>
             <p style="margin-top: 16px; font-size: 13px; opacity: 0.7;">© ۲۰۲۶ عمل برای ایران — همه حقوق محفوظ است</p>
         </footer>
     </div>

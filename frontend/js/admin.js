@@ -19,6 +19,26 @@ let roles = [];
 let recipientsAdmin = [];
 let campaignChart, countryChart, userCountryChart, topicsChart, topRecipientsChart, recipientCountriesChart, emailsOverTimeChart;
 
+// Inject CSRF token for admin mutations
+const originalFetch = window.fetch.bind(window);
+window.fetch = (input, init = {}) => {
+    const url = typeof input === 'string' ? input : input.url;
+    const method = (init.method || 'GET').toUpperCase();
+    const needsCsrf = url.includes('/api/v1/admin') && method !== 'GET';
+    if (needsCsrf) {
+        const csrfToken = sessionStorage.getItem('csrfToken');
+        if (csrfToken) {
+            init.headers = init.headers || {};
+            if (init.headers instanceof Headers) {
+                init.headers.set('X-CSRF-Token', csrfToken);
+            } else {
+                init.headers['X-CSRF-Token'] = csrfToken;
+            }
+        }
+    }
+    return originalFetch(input, init);
+};
+
 // DOM Elements (will be set in DOMContentLoaded)
 let loginContainer;
 let adminLayout;
@@ -80,6 +100,9 @@ async function attemptLogin(email, password) {
         if (response.ok) {
             token = responseData.access_token;
             sessionStorage.setItem('adminToken', token);
+            if (responseData.csrf_token) {
+                sessionStorage.setItem('csrfToken', responseData.csrf_token);
+            }
             showNotification('✅ Login successful', 'success');
             await checkAuth();
         } else {
@@ -117,6 +140,9 @@ async function login(email, password) {
         console.log('✅ Login successful, token received');
         token = data.access_token;
         sessionStorage.setItem('adminToken', token);
+        if (data.csrf_token) {
+            sessionStorage.setItem('csrfToken', data.csrf_token);
+        }
         
         showDashboard();
         showNotification('ورود موفقیت‌آمیز', 'success');
@@ -130,6 +156,7 @@ async function login(email, password) {
 function logout() {
     token = null;
     sessionStorage.removeItem('adminToken');
+    sessionStorage.removeItem('csrfToken');
     showLogin();
     showNotification('خروج موفقیت‌آمیز', 'success');
 }

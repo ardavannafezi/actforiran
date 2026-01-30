@@ -19,6 +19,7 @@ const state = {
     selectedRecipients: new Set(),
     selectedTopics: new Set(),
     citizenshipStatus: null,
+    citizenshipCountry: null,
     recipientsPage: 1,
     recipientsPageSize: 30,
     recipientsHasMore: true,
@@ -42,7 +43,9 @@ const elements = {
     userName: document.getElementById('userName'),
     emailGroups: document.getElementById('emailGroups'),
     selectedCountryLabel: document.getElementById('selectedCountryLabel'),
-    selectedCountryInline: document.getElementById('selectedCountryInline')
+    selectedCountryInline: document.getElementById('selectedCountryInline'),
+    citizenshipCountryGroup: document.getElementById('citizenshipCountryGroup'),
+    citizenshipCountrySelect: document.getElementById('citizenshipCountrySelect')
 };
 
 // ============================================
@@ -115,6 +118,7 @@ function initStepper() {
             console.log('🎯 Start button clicked (Custom Mode)');
             state.campaignMode = false;
             state.selectedCampaign = null;
+            updateCitizenshipCountryVisibility();
             document.querySelector('.hero').style.display = 'none';
             elements.stepperContainer.classList.add('active');
             loadCountries();
@@ -146,8 +150,15 @@ function initStepper() {
     document.querySelectorAll('input[name=\"citizenship_status\"]').forEach(radio => {
         radio.onclick = function(e) {
             state.citizenshipStatus = e.target.value;
+            updateCitizenshipCountryVisibility();
         };
     });
+
+    if (elements.citizenshipCountrySelect) {
+        elements.citizenshipCountrySelect.onchange = function(e) {
+            state.citizenshipCountry = e.target.value || null;
+        };
+    }
     
     console.log('✅ App initialized successfully');
 }
@@ -226,6 +237,10 @@ function validateCurrentStep() {
                 showNotification('لطفاً وضعیت شهروندی خود را مشخص کنید', 'error');
                 return false;
             }
+            if (state.campaignMode && state.citizenshipStatus === 'selected_country_citizen' && !state.citizenshipCountry) {
+                showNotification('لطفاً کشور شهروندی/اقامت خود را انتخاب کنید', 'error');
+                return false;
+            }
             break;
         case 4:
             if (state.selectedTopics.size === 0) {
@@ -277,6 +292,14 @@ async function loadCountries() {
         if (state.selectedCountry) {
             updateSelectedCountryLabels(state.selectedCountry);
         }
+
+        if (elements.citizenshipCountrySelect) {
+            elements.citizenshipCountrySelect.innerHTML = '<option value="">انتخاب کنید...</option>' +
+                state.countries.map(c => `<option value="${c.code}">${c.flag || ''} ${c.name_persian || c.name}</option>`).join('');
+            if (state.citizenshipCountry) {
+                elements.citizenshipCountrySelect.value = state.citizenshipCountry;
+            }
+        }
         
     } catch (error) {
         console.error('Error loading countries:', error);
@@ -327,6 +350,12 @@ function updateSelectedCountryLabels(countryCode) {
     if (elements.selectedCountryInline) {
         elements.selectedCountryInline.textContent = countryName;
     }
+}
+
+function updateCitizenshipCountryVisibility() {
+    if (!elements.citizenshipCountryGroup) return;
+    const shouldShow = state.campaignMode && state.citizenshipStatus === 'selected_country_citizen';
+    elements.citizenshipCountryGroup.style.display = shouldShow ? 'block' : 'none';
 }
 
 async function loadTopics() {
@@ -398,10 +427,7 @@ function renderCampaigns() {
                 <div class="campaign-icon">${campaign.icon}</div>
                 <div class="campaign-info">
                     <div class="campaign-title">${campaign.title}</div>
-                    <div class="campaign-country">
-                        <span>${campaign.country?.flag || ''}</span>
-                        <span>${campaign.country?.name_persian || campaign.country?.name || campaign.country_code || ''}</span>
-                    </div>
+                    <div class="campaign-country"></div>
                 </div>
             </div>
             <div class="campaign-description">${campaign.description || ''}</div>
@@ -433,6 +459,7 @@ async function selectCampaign(campaignId) {
     state.selectedCountry = campaign.country?.code || campaign.country_code || '';
     state.selectedRecipients = new Set(campaign.recipient_ids);
     state.selectedTopics = new Set(campaign.topic_ids);
+    state.citizenshipCountry = null;
     
     // Hide hero, show stepper
     document.querySelector('.hero').style.display = 'none';
@@ -458,6 +485,7 @@ async function selectCampaign(campaignId) {
         return handleCountryChange({ target: { value: state.selectedCountry } });
     });
     loadTopics();
+    updateCitizenshipCountryVisibility();
     
     showNotification(`کمپین "${campaign.title}" انتخاب شد`, 'info');
 }
@@ -470,6 +498,7 @@ async function generateEmail() {
         recipient_ids: Array.from(state.selectedRecipients),
         topic_ids: Array.from(state.selectedTopics),
         sender_citizenship_status: state.citizenshipStatus,
+        sender_citizenship_country_code: state.citizenshipCountry,
         user_name: userName || null,
         campaign_id: state.selectedCampaign || null
     };
@@ -524,6 +553,7 @@ async function sendEmailGroup(index) {
                 recipient_ids: group.recipient_ids,
                 topic_ids: Array.from(state.selectedTopics),
                 sender_citizenship_status: state.citizenshipStatus,
+                sender_citizenship_country_code: state.citizenshipCountry,
                 user_name: elements.userName ? elements.userName.value.trim() : null,
                 campaign_id: state.selectedCampaign || null,
                 subject,

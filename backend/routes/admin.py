@@ -1,7 +1,8 @@
 from datetime import datetime
+import secrets
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -31,6 +32,8 @@ from schemas import (
     PoliticalRecipientUpdate,
     RecipientRoleCreate,
     RecipientRoleOut,
+    TickerMessageCreate,
+    TickerMessageUpdate,
 )
 from services.auth import (
     create_access_token,
@@ -64,7 +67,7 @@ def log_action(
 
 
 @router.post("/auth/login", response_model=AdminTokenResponse)
-async def admin_login(payload: AdminLoginRequest, db: Session = Depends(get_db)):
+async def admin_login(payload: AdminLoginRequest, response: Response, db: Session = Depends(get_db)):
     admin = db.query(Administrator).filter(Administrator.email == payload.email).first()
     if not admin or not verify_password(payload.password, admin.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -78,7 +81,15 @@ async def admin_login(payload: AdminLoginRequest, db: Session = Depends(get_db))
     db.commit()
 
     token = create_access_token(subject=admin.email, role=admin.role)
-    return {"access_token": token, "token_type": "bearer", "role": admin.role}
+    csrf_token = secrets.token_urlsafe(32)
+    response.set_cookie(
+        "csrf_token",
+        csrf_token,
+        httponly=False,
+        samesite="Strict",
+        secure=True,
+    )
+    return {"access_token": token, "token_type": "bearer", "role": admin.role, "csrf_token": csrf_token}
 
 
 @router.post("/auth/refresh", response_model=AdminTokenResponse)
@@ -1143,19 +1154,27 @@ async def get_top_recipients(
 ):
     """Get top recipients by email count (per-recipient counting)"""
     from models import EmailGenerationLog
-    from sqlalchemy import text, desc
+    from sqlalchemy import func, desc
 
-    results = db.execute(text("""
-        SELECT r.id, r.full_name, r.email_address, c.name AS country_name,
-               COUNT(*) AS email_count
-        FROM email_generation_logs l
-        JOIN LATERAL unnest(l.recipient_ids) AS rid(recipient_id) ON TRUE
-        JOIN political_recipients r ON r.id = rid.recipient_id
-        JOIN countries c ON c.code = r.country_code
-        GROUP BY r.id, r.full_name, r.email_address, c.name
-        ORDER BY email_count DESC
-        LIMIT :limit
-    """), {"limit": limit}).fetchall()
+    recipient_id = func.unnest(EmailGenerationLog.recipient_ids).label("recipient_id")
+    recipient_subq = db.query(recipient_id).select_from(EmailGenerationLog).subquery()
+
+    results = db.query(
+        PoliticalRecipient.id,
+        PoliticalRecipient.full_name,
+        PoliticalRecipient.email_address,
+        Country.name.label("country_name"),
+        func.count().label("email_count")
+    ).join(
+        recipient_subq, PoliticalRecipient.id == recipient_subq.c.recipient_id
+    ).join(
+        Country, PoliticalRecipient.country_code == Country.code
+    ).group_by(
+        PoliticalRecipient.id,
+        PoliticalRecipient.full_name,
+        PoliticalRecipient.email_address,
+        Country.name
+    ).order_by(desc("email_count")).limit(limit).all()
 
     return {
         "top_recipients": [
@@ -1178,18 +1197,22 @@ async def get_top_recipient_countries(
     admin: Administrator = Depends(get_current_admin)
 ):
     """Top recipient countries (per-recipient counting)"""
-    from sqlalchemy import text
+    from models import EmailGenerationLog
+    from sqlalchemy import func, desc
 
-    results = db.execute(text("""
-        SELECT c.name AS country_name, COUNT(*) AS email_count
-        FROM email_generation_logs l
-        JOIN LATERAL unnest(l.recipient_ids) AS rid(recipient_id) ON TRUE
-        JOIN political_recipients r ON r.id = rid.recipient_id
-        JOIN countries c ON c.code = r.country_code
-        GROUP BY c.name
-        ORDER BY email_count DESC
-        LIMIT :limit
-    """), {"limit": limit}).fetchall()
+    recipient_id = func.unnest(EmailGenerationLog.recipient_ids).label("recipient_id")
+    recipient_subq = db.query(recipient_id).select_from(EmailGenerationLog).subquery()
+
+    results = db.query(
+        Country.name.label("country_name"),
+        func.count().label("email_count")
+    ).join(
+        PoliticalRecipient, PoliticalRecipient.country_code == Country.code
+    ).join(
+        recipient_subq, PoliticalRecipient.id == recipient_subq.c.recipient_id
+    ).group_by(
+        Country.name
+    ).order_by(desc("email_count")).limit(limit).all()
 
     return {
         "top_recipient_countries": [
@@ -1615,29 +1638,36 @@ async def get_analytics_bundle(
             top_topics.append({"topic_id": topic_id, "topic_title": topic.display_title, "usage_count": count})
 
     # Top recipients (per-recipient counting)
-    from sqlalchemy import text
-    top_recipients = db.execute(text("""
-        SELECT r.id, r.full_name, r.email_address, c.name AS country_name,
-               COUNT(*) AS email_count
-        FROM email_generation_logs l
-        JOIN LATERAL unnest(l.recipient_ids) AS rid(recipient_id) ON TRUE
-        JOIN political_recipients r ON r.id = rid.recipient_id
-        JOIN countries c ON c.code = r.country_code
-        GROUP BY r.id, r.full_name, r.email_address, c.name
-        ORDER BY email_count DESC
-        LIMIT 10
-    """)).fetchall()
+    recipient_id = func.unnest(EmailGenerationLog.recipient_ids).label("recipient_id")
+    recipient_subq = db.query(recipient_id).select_from(EmailGenerationLog).subquery()
 
-    top_recipient_countries = db.execute(text("""
-        SELECT c.name AS country_name, COUNT(*) AS email_count
-        FROM email_generation_logs l
-        JOIN LATERAL unnest(l.recipient_ids) AS rid(recipient_id) ON TRUE
-        JOIN political_recipients r ON r.id = rid.recipient_id
-        JOIN countries c ON c.code = r.country_code
-        GROUP BY c.name
-        ORDER BY email_count DESC
-        LIMIT 10
-    """)).fetchall()
+    top_recipients = db.query(
+        PoliticalRecipient.id,
+        PoliticalRecipient.full_name,
+        PoliticalRecipient.email_address,
+        Country.name.label("country_name"),
+        func.count().label("email_count")
+    ).join(
+        recipient_subq, PoliticalRecipient.id == recipient_subq.c.recipient_id
+    ).join(
+        Country, PoliticalRecipient.country_code == Country.code
+    ).group_by(
+        PoliticalRecipient.id,
+        PoliticalRecipient.full_name,
+        PoliticalRecipient.email_address,
+        Country.name
+    ).order_by(desc("email_count")).limit(10).all()
+
+    top_recipient_countries = db.query(
+        Country.name.label("country_name"),
+        func.count().label("email_count")
+    ).join(
+        PoliticalRecipient, PoliticalRecipient.country_code == Country.code
+    ).join(
+        recipient_subq, PoliticalRecipient.id == recipient_subq.c.recipient_id
+    ).group_by(
+        Country.name
+    ).order_by(desc("email_count")).limit(10).all()
 
     return {
         "top_countries": [{"country": r[0], "email_count": r[1]} for r in top_countries],
@@ -2045,18 +2075,16 @@ async def create_ticker_message(
 ):
     """Create a new ticker message (super admin only)"""
     data = await request.json()
-    message_text = data.get("message_text", "").strip()
-    
-    if not message_text:
-        raise HTTPException(status_code=400, detail="Message text is required")
+    payload = TickerMessageCreate(**data)
+    message_text = payload.message_text
     
     # Get max display_order
     max_order = db.query(TickerMessage).count()
     
     new_message = TickerMessage(
         message_text=message_text,
-        is_active=data.get("is_active", True),
-        display_order=data.get("display_order", max_order + 1),
+        is_active=payload.is_active if payload.is_active is not None else True,
+        display_order=payload.display_order or (max_order + 1),
         created_by_admin_id=current_admin.id
     )
     
@@ -2095,18 +2123,16 @@ async def update_ticker_message(
         raise HTTPException(status_code=404, detail="Ticker message not found")
     
     data = await request.json()
+    payload = TickerMessageUpdate(**data)
     
-    if "message_text" in data:
-        message_text = data["message_text"].strip()
-        if not message_text:
-            raise HTTPException(status_code=400, detail="Message text cannot be empty")
-        message.message_text = message_text
+    if payload.message_text is not None:
+        message.message_text = payload.message_text
     
-    if "is_active" in data:
-        message.is_active = data["is_active"]
+    if payload.is_active is not None:
+        message.is_active = payload.is_active
     
-    if "display_order" in data:
-        message.display_order = data["display_order"]
+    if payload.display_order is not None:
+        message.display_order = payload.display_order
     
     db.commit()
     db.refresh(message)
