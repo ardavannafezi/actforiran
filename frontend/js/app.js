@@ -803,6 +803,11 @@ async function loadTickerMessages() {
                 if (tickerMessages.length > 1) {
                     startTickerSlider();
                 }
+            } else {
+                const tickerText = document.getElementById('tickerText');
+                if (tickerText) {
+                    tickerText.textContent = 'مرکز رسمی حمایت بین‌المللی — صدای شما به گوش جهان می‌رسد';
+                }
             }
         }
     } catch (error) {
