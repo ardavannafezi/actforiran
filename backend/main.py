@@ -78,7 +78,12 @@ async def enforce_csrf(request, call_next):
             cookie_token = request.cookies.get("csrf_token")
             header_token = request.headers.get("x-csrf-token")
             if not cookie_token or not header_token or cookie_token != header_token:
-                return JSONResponse(status_code=403, content={"detail": "CSRF token missing or invalid"})
+                response = JSONResponse(status_code=403, content={"detail": "CSRF token missing or invalid"})
+                origin = request.headers.get("origin")
+                if origin and (origin in allow_origins or re.match(r"^https://(www\.)?actforiran\.org$", origin)):
+                    response.headers["Access-Control-Allow-Origin"] = origin
+                    response.headers["Vary"] = "Origin"
+                return response
     return await call_next(request)
 
 # Rate limiting

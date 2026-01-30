@@ -35,6 +35,9 @@ window.fetch = (input, init = {}) => {
                 init.headers['X-CSRF-Token'] = csrfToken;
             }
         }
+        init.credentials = 'include';
+    } else if (url.includes('/api/v1/admin')) {
+        init.credentials = 'include';
     }
     return originalFetch(input, init);
 };

@@ -494,6 +494,14 @@ async function generateEmail() {
         showNotification('لطفاً وضعیت شهروندی خود را مشخص کنید', 'error');
         return;
     }
+    if (state.selectedRecipients.size === 0) {
+        showNotification('لطفاً حداقل یک گیرنده انتخاب کنید', 'error');
+        return;
+    }
+    if (state.selectedTopics.size === 0) {
+        showNotification('لطفاً حداقل یک موضوع انتخاب کنید', 'error');
+        return;
+    }
     if (state.campaignMode && state.citizenshipStatus === 'selected_country_citizen' && !state.citizenshipCountry) {
         showNotification('لطفاً کشور شهروندی/اقامت خود را انتخاب کنید', 'error');
         return;
@@ -523,11 +531,11 @@ async function generateEmail() {
         });
         
         if (!response.ok) {
-        let errorDetail = 'Failed to generate email';
+        let errorDetail = 'خطا در تولید ایمیل';
         try {
             const error = await response.json();
             if (error && error.detail) {
-                errorDetail = typeof error.detail === 'string' ? error.detail : JSON.stringify(error.detail);
+                errorDetail = typeof error.detail === 'string' ? error.detail : errorDetail;
             }
         } catch (e) {
             // ignore JSON parse errors
@@ -543,7 +551,7 @@ async function generateEmail() {
         
     } catch (error) {
         console.error('Error generating email:', error);
-        showNotification('خطا در تولید ایمیل با هوش مصنوعی', 'error');
+        showNotification(error.message || 'خطا در تولید ایمیل', 'error');
     }
 }
 
