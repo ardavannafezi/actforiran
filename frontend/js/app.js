@@ -531,16 +531,20 @@ async function generateEmail() {
         });
         
         if (!response.ok) {
-        let errorDetail = 'خطا در تولید ایمیل';
-        try {
-            const error = await response.json();
-            if (error && error.detail) {
-                errorDetail = typeof error.detail === 'string' ? error.detail : errorDetail;
+            let errorDetail = 'خطا در تولید ایمیل';
+            if (response.status === 502 || response.status === 504) {
+                errorDetail = 'سرویس هوش مصنوعی موقتاً در دسترس نیست. لطفاً دوباره تلاش کنید.';
+            } else {
+                try {
+                    const error = await response.json();
+                    if (error && error.detail) {
+                        errorDetail = typeof error.detail === 'string' ? error.detail : errorDetail;
+                    }
+                } catch (e) {
+                    // ignore JSON parse errors
+                }
             }
-        } catch (e) {
-            // ignore JSON parse errors
-        }
-        throw new Error(errorDetail);
+            throw new Error(errorDetail);
         }
         
         const data = await response.json();
@@ -551,7 +555,8 @@ async function generateEmail() {
         
     } catch (error) {
         console.error('Error generating email:', error);
-        showNotification(error.message || 'خطا در تولید ایمیل', 'error');
+        const message = error?.message || 'خطا در تولید ایمیل';
+        showNotification(message, 'error');
     }
 }
 

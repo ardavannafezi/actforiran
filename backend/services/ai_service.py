@@ -165,8 +165,9 @@ async def generate_email(
         "Content-Type": "application/json",
     }
 
+    timeout = httpx.Timeout(10.0, connect=7.0, read=10.0)
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(OPENAI_API_URL, headers=headers, json=payload)
 
         if response.status_code >= 400:

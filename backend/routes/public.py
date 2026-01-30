@@ -1,4 +1,5 @@
 import os
+import asyncio
 from typing import Optional
 from urllib.parse import quote
 import httpx
@@ -266,14 +267,20 @@ async def generate_email_endpoint(
             ]
 
             try:
-                subject, body, used_tokens = await generate_email(
-                    country_name=country.name,
-                    recipients=group_payload,
-                    topics=topics_payload,
-                    sender_citizenship_status=sender_citizenship_status,
-                    user_name=payload.user_name,
+                subject, body, used_tokens = await asyncio.wait_for(
+                    generate_email(
+                        country_name=country.name,
+                        recipients=group_payload,
+                        topics=topics_payload,
+                        sender_citizenship_status=sender_citizenship_status,
+                        user_name=payload.user_name,
+                    ),
+                    timeout=12.0,
                 )
                 token_usage += used_tokens
+            except asyncio.TimeoutError as exc:
+                print("❌ AI Service Timeout")
+                raise HTTPException(status_code=504, detail="AI service timed out. Please try again.") from exc
             except AIServiceError as exc:
                 print(f"❌ AI Service Error: {str(exc)}")
                 raise HTTPException(status_code=500, detail=f"AI service error: {str(exc)}") from exc
