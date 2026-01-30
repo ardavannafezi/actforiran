@@ -1106,15 +1106,19 @@ async def get_top_topics(
     from sqlalchemy import func, desc
     
     # Get all topic IDs from logs
-    logs = db.query(EmailGenerationLog.topic_ids).filter(
+    logs = db.query(
+        EmailGenerationLog.topic_ids,
+        func.coalesce(func.array_length(EmailGenerationLog.recipient_ids, 1), 0).label("recipient_count")
+    ).filter(
         EmailGenerationLog.topic_ids.isnot(None)
     ).all()
     
     topic_counts = {}
     for log in logs:
-        if log.topic_ids:
-            for topic_id in log.topic_ids:
-                topic_counts[topic_id] = topic_counts.get(topic_id, 0) + 1
+        topic_ids = log.topic_ids or []
+        recipient_count = log.recipient_count or 0
+        for topic_id in topic_ids:
+            topic_counts[topic_id] = topic_counts.get(topic_id, 0) + recipient_count
     
     sorted_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
     
@@ -1129,6 +1133,102 @@ async def get_top_topics(
             })
     
     return {"top_topics": results}
+
+
+@router.get("/analytics/top-recipients")
+async def get_top_recipients(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Get top recipients by email count (per-recipient counting)"""
+    from models import EmailGenerationLog
+    from sqlalchemy import text, desc
+
+    results = db.execute(text("""
+        SELECT r.id, r.full_name, r.email_address, c.name AS country_name,
+               COUNT(*) AS email_count
+        FROM email_generation_logs l
+        JOIN LATERAL unnest(l.recipient_ids) AS rid(recipient_id) ON TRUE
+        JOIN political_recipients r ON r.id = rid.recipient_id
+        JOIN countries c ON c.code = r.country_code
+        GROUP BY r.id, r.full_name, r.email_address, c.name
+        ORDER BY email_count DESC
+        LIMIT :limit
+    """), {"limit": limit}).fetchall()
+
+    return {
+        "top_recipients": [
+            {
+                "recipient_id": r[0],
+                "full_name": r[1],
+                "email_address": r[2],
+                "country_name": r[3],
+                "email_count": r[4]
+            }
+            for r in results
+        ]
+    }
+
+
+@router.get("/analytics/top-recipient-countries")
+async def get_top_recipient_countries(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Top recipient countries (per-recipient counting)"""
+    from sqlalchemy import text
+
+    results = db.execute(text("""
+        SELECT c.name AS country_name, COUNT(*) AS email_count
+        FROM email_generation_logs l
+        JOIN LATERAL unnest(l.recipient_ids) AS rid(recipient_id) ON TRUE
+        JOIN political_recipients r ON r.id = rid.recipient_id
+        JOIN countries c ON c.code = r.country_code
+        GROUP BY c.name
+        ORDER BY email_count DESC
+        LIMIT :limit
+    """), {"limit": limit}).fetchall()
+
+    return {
+        "top_recipient_countries": [
+            {"country": r[0], "email_count": r[1]}
+            for r in results
+        ]
+    }
+
+
+@router.get("/analytics/emails-over-time")
+async def get_emails_over_time(
+    granularity: str = "day",
+    limit: int = 60,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin)
+):
+    """Emails over time (per-recipient counting). granularity=day|week|month"""
+    from models import EmailGenerationLog
+    from sqlalchemy import func, text, desc
+
+    if granularity not in ["day", "week", "month"]:
+        raise HTTPException(status_code=400, detail="Invalid granularity")
+
+    time_bucket = func.date_trunc(granularity, EmailGenerationLog.created_at).label("bucket")
+    email_units = func.coalesce(func.array_length(EmailGenerationLog.recipient_ids, 1), 0)
+
+    results = db.query(
+        time_bucket,
+        func.coalesce(func.sum(email_units), 0).label("email_count")
+    ).group_by(
+        time_bucket
+    ).order_by(desc(time_bucket)).limit(limit).all()
+
+    # Return in chronological order
+    results = list(reversed(results))
+    return {
+        "granularity": granularity,
+        "series": [{"date": r[0].date().isoformat() if r[0] else None, "email_count": r[1]} for r in results]
+    }
 
 
 @router.get("/analytics/recent-activity")
@@ -1498,12 +1598,62 @@ async def get_analytics_bundle(
         EmailGenerationLog.sender_country_code,
     ).order_by(desc("user_count")).limit(10).all()
 
+    # Top topics (per-recipient counting)
+    logs = db.query(
+        EmailGenerationLog.topic_ids,
+        func.coalesce(func.array_length(EmailGenerationLog.recipient_ids, 1), 0).label("recipient_count")
+    ).filter(EmailGenerationLog.topic_ids.isnot(None)).all()
+    topic_counts = {}
+    for log in logs:
+        for topic_id in (log.topic_ids or []):
+            topic_counts[topic_id] = topic_counts.get(topic_id, 0) + (log.recipient_count or 0)
+    top_topic_ids = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    top_topics = []
+    for topic_id, count in top_topic_ids:
+        topic = db.query(AdvocacyTopic).filter(AdvocacyTopic.id == topic_id).first()
+        if topic:
+            top_topics.append({"topic_id": topic_id, "topic_title": topic.display_title, "usage_count": count})
+
+    # Top recipients (per-recipient counting)
+    from sqlalchemy import text
+    top_recipients = db.execute(text("""
+        SELECT r.id, r.full_name, r.email_address, c.name AS country_name,
+               COUNT(*) AS email_count
+        FROM email_generation_logs l
+        JOIN LATERAL unnest(l.recipient_ids) AS rid(recipient_id) ON TRUE
+        JOIN political_recipients r ON r.id = rid.recipient_id
+        JOIN countries c ON c.code = r.country_code
+        GROUP BY r.id, r.full_name, r.email_address, c.name
+        ORDER BY email_count DESC
+        LIMIT 10
+    """)).fetchall()
+
+    top_recipient_countries = db.execute(text("""
+        SELECT c.name AS country_name, COUNT(*) AS email_count
+        FROM email_generation_logs l
+        JOIN LATERAL unnest(l.recipient_ids) AS rid(recipient_id) ON TRUE
+        JOIN political_recipients r ON r.id = rid.recipient_id
+        JOIN countries c ON c.code = r.country_code
+        GROUP BY c.name
+        ORDER BY email_count DESC
+        LIMIT 10
+    """)).fetchall()
+
     return {
         "top_countries": [{"country": r[0], "email_count": r[1]} for r in top_countries],
         "campaign_analytics": campaign_analytics,
         "user_countries": [
             {"country": r[0] or r[1] or "Unknown", "country_code": r[1], "user_count": r[2]}
             for r in user_countries
+        ],
+        "top_topics": top_topics,
+        "top_recipients": [
+            {"recipient_id": r[0], "full_name": r[1], "email_address": r[2], "country_name": r[3], "email_count": r[4]}
+            for r in top_recipients
+        ],
+        "top_recipient_countries": [
+            {"country": r[0], "email_count": r[1]}
+            for r in top_recipient_countries
         ],
     }
 

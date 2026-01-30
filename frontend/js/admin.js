@@ -17,7 +17,7 @@ let adminData = null;
 let countries = [];
 let roles = [];
 let recipientsAdmin = [];
-let campaignChart, countryChart, userCountryChart;
+let campaignChart, countryChart, userCountryChart, topicsChart, topRecipientsChart, recipientCountriesChart, emailsOverTimeChart;
 
 // DOM Elements (will be set in DOMContentLoaded)
 let loginContainer;
@@ -974,14 +974,14 @@ async function loadCampaignAnalytics() {
         
         // Update overview stats with fallbacks
         const totalEmails = overview.total_emails || overview.total_emails_generated || 0;
-        const successRate = overview.success_rate || '0%';
+        const totalRequests = overview.total_requests || 0;
         const uniqueUsers = overview.unique_users || 0;
         const activeCampaigns = overview.active_campaigns || 0;
         
         console.log('Setting analytics values:', { totalEmails, successRate, uniqueUsers, activeCampaigns });
         
         document.getElementById('analyticsTotal').textContent = toPersian(totalEmails);
-        document.getElementById('analyticsSuccess').textContent = successRate;
+        document.getElementById('analyticsSuccess').textContent = toPersian(totalRequests);
         document.getElementById('analyticsUnique').textContent = toPersian(uniqueUsers);
         document.getElementById('analyticsCampaigns').textContent = toPersian(activeCampaigns);
         
@@ -1036,11 +1036,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.admin-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             if (tab.dataset.tab === 'analytics') {
-                loadCampaignAnalytics();
+                loadAnalytics();
             }
             if (tab.dataset.tab === 'campaigns') {
                 loadCampaigns();
             }
+        });
+    });
+
+    document.querySelectorAll('.time-toggle button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentGranularity = btn.dataset.granularity || 'day';
+            document.querySelectorAll('.time-toggle button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadEmailsOverTime(currentGranularity);
         });
     });
 
@@ -1424,7 +1433,7 @@ window.renderCharts = function(analytics) {
         console.log('⚠️ No campaign data or canvas not found');
     }
     
-    // Country Distribution Chart
+    // Country Distribution Chart (bar for long labels)
     const countryCtx = document.getElementById('countryChart');
     console.log('🖼️ Country canvas:', countryCtx);
     
@@ -1439,37 +1448,22 @@ window.renderCharts = function(analytics) {
             console.log('📊 Creating country chart with', countries.length, 'countries');
             
             countryChart = new Chart(countryCtx, {
-                type: 'doughnut',
+                type: 'bar',
                 data: {
                     labels: countries.map(c => c.country),
                     datasets: [{
                         data: countries.map(c => c.email_count),
-                        backgroundColor: [
-                            'rgba(99, 102, 241, 0.8)',
-                            'rgba(236, 72, 153, 0.8)',
-                            'rgba(34, 197, 94, 0.8)',
-                            'rgba(251, 191, 36, 0.8)',
-                            'rgba(239, 68, 68, 0.8)',
-                            'rgba(168, 85, 247, 0.8)',
-                            'rgba(59, 130, 246, 0.8)',
-                            'rgba(14, 165, 233, 0.8)',
-                            'rgba(251, 146, 60, 0.8)',
-                            'rgba(132, 204, 22, 0.8)'
-                        ]
+                        backgroundColor: countries.map((_, i) => `hsla(${(i * 35) % 360}, 80%, 60%, 0.85)`),
+                        borderColor: countries.map((_, i) => `hsl(${(i * 35) % 360}, 80%, 50%)`),
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                font: { size: 11 }
-                            }
-                        }
-                    }
+                    plugins: { legend: { display: false } },
+                    indexAxis: 'y',
+                    scales: { x: { beginAtZero: true } }
                 }
             });
             console.log('✅ Country chart created successfully');
@@ -1501,8 +1495,8 @@ window.renderCharts = function(analytics) {
                     datasets: [{
                         label: 'کاربر',
                         data: users.map(u => u.user_count),
-                        backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: users.map((_, i) => `hsla(${(120 + i * 25) % 360}, 70%, 55%, 0.85)`),
+                        borderColor: users.map((_, i) => `hsl(${(120 + i * 25) % 360}, 70%, 45%)`),
                         borderWidth: 1
                     }]
                 },
@@ -1528,6 +1522,99 @@ window.renderCharts = function(analytics) {
         }
     } else {
         console.log('⚠️ No user country data or canvas not found');
+    }
+
+    // Topics Chart
+    const topicsCtx = document.getElementById('topicsChart');
+    if (topicsCtx && analytics.top_topics && analytics.top_topics.length > 0) {
+        try {
+            if (topicsChart) topicsChart.destroy();
+            const topics = analytics.top_topics.slice(0, 10);
+            topicsChart = new Chart(topicsCtx, {
+                type: 'bar',
+                data: {
+                    labels: topics.map(t => t.topic_title),
+                    datasets: [{
+                        label: 'تعداد',
+                        data: topics.map(t => t.usage_count),
+                        backgroundColor: topics.map((_, i) => `hsla(${(200 + i * 20) % 360}, 80%, 60%, 0.85)`),
+                        borderColor: topics.map((_, i) => `hsl(${(200 + i * 20) % 360}, 80%, 50%)`),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    indexAxis: 'y',
+                    scales: { x: { beginAtZero: true } }
+                }
+            });
+        } catch (error) {
+            console.error('❌ Error creating topics chart:', error);
+        }
+    }
+
+    // Top Recipients Chart
+    const topRecipientsCtx = document.getElementById('topRecipientsChart');
+    if (topRecipientsCtx && analytics.top_recipients && analytics.top_recipients.length > 0) {
+        try {
+            if (topRecipientsChart) topRecipientsChart.destroy();
+            const recipients = analytics.top_recipients.slice(0, 10);
+            topRecipientsChart = new Chart(topRecipientsCtx, {
+                type: 'bar',
+                data: {
+                    labels: recipients.map(r => r.full_name),
+                    datasets: [{
+                        label: 'تعداد ایمیل',
+                        data: recipients.map(r => r.email_count),
+                        backgroundColor: recipients.map((_, i) => `hsla(${(30 + i * 25) % 360}, 75%, 60%, 0.85)`),
+                        borderColor: recipients.map((_, i) => `hsl(${(30 + i * 25) % 360}, 75%, 50%)`),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    indexAxis: 'y',
+                    scales: { x: { beginAtZero: true } }
+                }
+            });
+        } catch (error) {
+            console.error('❌ Error creating top recipients chart:', error);
+        }
+    }
+
+    // Recipient Countries Chart
+    const recipientCountriesCtx = document.getElementById('recipientCountriesChart');
+    if (recipientCountriesCtx && analytics.top_recipient_countries && analytics.top_recipient_countries.length > 0) {
+        try {
+            if (recipientCountriesChart) recipientCountriesChart.destroy();
+            const countries = analytics.top_recipient_countries.slice(0, 10);
+            recipientCountriesChart = new Chart(recipientCountriesCtx, {
+                type: 'bar',
+                data: {
+                    labels: countries.map(c => c.country),
+                    datasets: [{
+                        label: 'تعداد ایمیل',
+                        data: countries.map(c => c.email_count),
+                        backgroundColor: countries.map((_, i) => `hsla(${(260 + i * 20) % 360}, 70%, 60%, 0.85)`),
+                        borderColor: countries.map((_, i) => `hsl(${(260 + i * 20) % 360}, 70%, 50%)`),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    indexAxis: 'y',
+                    scales: { x: { beginAtZero: true } }
+                }
+            });
+        } catch (error) {
+            console.error('❌ Error creating recipient countries chart:', error);
+        }
     }
 };
 
@@ -1583,11 +1670,48 @@ window.loadAnalytics = async function() {
                 }
             }
             
+            // Tables
+            const topCountriesList = document.getElementById('topCountriesList');
+            if (topCountriesList) {
+                const rows = (analytics.top_countries || []).slice(0, 10).map(tc => `
+                    <tr>
+                        <td>${tc.country}</td>
+                        <td>${toPersian(tc.email_count)}</td>
+                    </tr>
+                `).join('');
+                topCountriesList.innerHTML = rows || '<tr><td colspan="2" class="no-data">هنوز داده‌ای ثبت نشده</td></tr>';
+            }
+
+            const topTopicsList = document.getElementById('topTopicsList');
+            if (topTopicsList) {
+                const rows = (analytics.top_topics || []).slice(0, 10).map(t => `
+                    <tr>
+                        <td>${t.topic_title}</td>
+                        <td>${toPersian(t.usage_count)}</td>
+                    </tr>
+                `).join('');
+                topTopicsList.innerHTML = rows || '<tr><td colspan="2" class="no-data">هنوز داده‌ای ثبت نشده</td></tr>';
+            }
+
+            const topRecipientsList = document.getElementById('topRecipientsList');
+            if (topRecipientsList) {
+                const rows = (analytics.top_recipients || []).slice(0, 10).map(r => `
+                    <tr>
+                        <td>${r.full_name}</td>
+                        <td>${r.country_name}</td>
+                        <td>${toPersian(r.email_count)}</td>
+                    </tr>
+                `).join('');
+                topRecipientsList.innerHTML = rows || '<tr><td colspan="3" class="no-data">هنوز داده‌ای ثبت نشده</td></tr>';
+            }
+
             if (typeof renderCharts === 'function') {
                 renderCharts(analytics);
             } else {
                 console.error('❌ renderCharts function not found');
             }
+
+            await loadEmailsOverTime(currentGranularity);
         } else {
             console.error('Failed to fetch analytics:', response.status);
         }
@@ -1595,6 +1719,45 @@ window.loadAnalytics = async function() {
         console.error('Failed to load analytics for charts:', error);
     }
 };
+
+let currentGranularity = 'day';
+
+async function loadEmailsOverTime(granularity = 'day') {
+    const token = sessionStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE}/api/v1/admin/analytics/emails-over-time?granularity=${granularity}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    renderEmailsOverTime(data.series || [], granularity);
+}
+
+function renderEmailsOverTime(series, granularity) {
+    const ctx = document.getElementById('emailsOverTimeChart');
+    if (!ctx) return;
+    if (emailsOverTimeChart) emailsOverTimeChart.destroy();
+    emailsOverTimeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: series.map(s => s.date),
+            datasets: [{
+                label: `ایمیل‌ها (${granularity})`,
+                data: series.map(s => s.email_count),
+                fill: true,
+                backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                borderColor: 'rgb(56, 189, 248)',
+                borderWidth: 2,
+                tension: 0.35
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
 
 // ============================================
 // TICKER MESSAGE MANAGEMENT
@@ -1638,12 +1801,16 @@ function renderTickerMessages(messages) {
             <td>${toPersian(msg.display_order)}</td>
             <td>${msg.created_at ? formatDate(msg.created_at) : '-'}</td>
             <td>
-                <button class="btn btn-sm btn-secondary" onclick="editTickerMessage(${msg.id})">ویرایش</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteTickerMessage(${msg.id})">حذف</button>
+                <button class="btn btn-sm btn-secondary" onclick="window.editTickerMessage(${msg.id})">ویرایش</button>
+                <button class="btn btn-sm btn-danger" onclick="window.deleteTickerMessage(${msg.id})">حذف</button>
             </td>
         </tr>
     `).join('');
 }
+
+// Make globally accessible
+window.editTickerMessage = editTickerMessage;
+window.deleteTickerMessage = deleteTickerMessage;
 
 async function editTickerMessage(id) {
     try {
