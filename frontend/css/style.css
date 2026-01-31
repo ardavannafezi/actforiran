@@ -948,6 +948,27 @@ body {
     font-size: 14px;
 }
 
+.long-text.clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.read-more-btn {
+    margin-top: 8px;
+    background: transparent;
+    border: none;
+    color: var(--accent-red);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.read-more-btn:hover {
+    text-decoration: underline;
+}
+
 /* Radio Group */
 .radio-group {
     display: flex;
@@ -1039,6 +1060,14 @@ body {
     font-size: 14px;
 }
 
+.campaign-results-grid {
+    width: 100%;
+}
+
+.result-card {
+    word-break: break-word;
+}
+
 /* Footer */
 .footer {
     background: var(--bg-surface);
@@ -1115,9 +1144,19 @@ body {
     .hero p {
         font-size: 16px;
     }
+
+    .hero {
+        padding: 24px 16px;
+    }
+
+    .campaigns-section {
+        margin: 24px auto 32px;
+        padding: 0 12px;
+    }
     
     .info-section {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
+        gap: 16px;
     }
     
     .step-indicators {
@@ -1130,6 +1169,20 @@ body {
     
     .stepper-container {
         padding: 20px;
+    }
+
+    .campaign-results-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+        padding: 0 12px;
+    }
+
+    .result-card {
+        padding: 20px !important;
+    }
+
+    .result-card h3 {
+        font-size: 18px !important;
     }
 }
 

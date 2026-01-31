@@ -1201,6 +1201,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Load campaigns on page load
     loadCampaigns();
+
+    // Read more for long text blocks
+    document.querySelectorAll('.long-text').forEach((el) => {
+        const text = el.textContent || '';
+        if (text.length < 160) return;
+        el.classList.add('clamped');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'read-more-btn';
+        btn.textContent = 'بیشتر';
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const expanded = el.classList.toggle('expanded');
+            el.classList.toggle('clamped', !expanded);
+            btn.textContent = expanded ? 'کمتر' : 'بیشتر';
+        });
+        el.insertAdjacentElement('afterend', btn);
+    });
     
     // Initialize stepper
     try {
