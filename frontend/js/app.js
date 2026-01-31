@@ -765,7 +765,8 @@ async function generateCampaignEmail() {
             topic_ids: topicIds,
             sender_citizenship_status: state.citizenshipStatus,
             user_name: userName || null,
-            campaign_id: state.selectedCampaign || null
+            campaign_id: state.selectedCampaign || null,
+            campaign_content: state.campaignDescription || null
         };
         if (state.citizenshipCountry) {
             payload.sender_citizenship_country_code = state.citizenshipCountry;
