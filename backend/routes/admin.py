@@ -1595,6 +1595,117 @@ async def get_user_countries(
     }
 
 
+# ===============================
+# TICKER MESSAGES ROUTES
+# ===============================
+
+@router.get("/ticker-messages")
+async def list_ticker_messages(
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin),
+):
+    """Get all ticker messages"""
+    messages = db.query(TickerMessage).order_by(TickerMessage.display_order, TickerMessage.id).all()
+    return {
+        "ticker_messages": [
+            {
+                "id": m.id,
+                "message_text": m.message_text,
+                "is_active": m.is_active,
+                "display_order": m.display_order,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+                "updated_at": m.updated_at.isoformat() if m.updated_at else None,
+            }
+            for m in messages
+        ]
+    }
+
+
+@router.post("/ticker-messages")
+async def create_ticker_message(
+    payload: TickerMessageCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin),
+):
+    """Create a new ticker message"""
+    new_message = TickerMessage(
+        message_text=payload.message_text,
+        is_active=payload.is_active if payload.is_active is not None else True,
+        display_order=payload.display_order or 0,
+        created_by_admin_id=admin.id,
+    )
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+
+    log_action(db, admin, "CREATE_TICKER_MESSAGE", "ticker_message", new_message.id, {"message_text": new_message.message_text}, request)
+    db.commit()
+
+    return {
+        "id": new_message.id,
+        "message_text": new_message.message_text,
+        "is_active": new_message.is_active,
+        "display_order": new_message.display_order,
+        "created_at": new_message.created_at.isoformat() if new_message.created_at else None,
+    }
+
+
+@router.put("/ticker-messages/{message_id}")
+async def update_ticker_message(
+    message_id: int,
+    payload: TickerMessageUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin),
+):
+    """Update a ticker message"""
+    message = db.query(TickerMessage).filter(TickerMessage.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="Ticker message not found")
+
+    if payload.message_text is not None:
+        message.message_text = payload.message_text
+    if payload.is_active is not None:
+        message.is_active = payload.is_active
+    if payload.display_order is not None:
+        message.display_order = payload.display_order
+
+    db.commit()
+    db.refresh(message)
+
+    log_action(db, admin, "UPDATE_TICKER_MESSAGE", "ticker_message", message.id, {"message_text": message.message_text}, request)
+    db.commit()
+
+    return {
+        "id": message.id,
+        "message_text": message.message_text,
+        "is_active": message.is_active,
+        "display_order": message.display_order,
+        "updated_at": message.updated_at.isoformat() if message.updated_at else None,
+    }
+
+
+@router.delete("/ticker-messages/{message_id}")
+async def delete_ticker_message(
+    message_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(get_current_admin),
+):
+    """Delete a ticker message"""
+    message = db.query(TickerMessage).filter(TickerMessage.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="Ticker message not found")
+
+    log_action(db, admin, "DELETE_TICKER_MESSAGE", "ticker_message", message.id, {"message_text": message.message_text}, request)
+    
+    db.delete(message)
+    db.commit()
+
+    return {"success": True, "message": "Ticker message deleted"}
+
+
 @router.get("/analytics")
 async def get_analytics_bundle(
     db: Session = Depends(get_db),
