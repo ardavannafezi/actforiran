@@ -166,7 +166,10 @@ function showDashboard() {
     adminLayout.classList.add('active');
     
     if (adminData) {
-        document.getElementById('adminEmail').textContent = adminData.email;
+        const adminEmailDisplay = document.getElementById('adminEmailDisplay');
+        if (adminEmailDisplay) {
+            adminEmailDisplay.textContent = adminData.email;
+        }
         
         // Hide admins tab and ticker tab for non-super-admins
         const adminsTab = document.querySelector('[data-tab="admins"]');
@@ -1218,12 +1221,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const id = document.getElementById('adminId').value;
         const payload = {
-            email: document.getElementById('adminEmail').value,
+            email: document.getElementById('adminFormEmail').value,
             role: document.getElementById('adminRole').value,
             is_active: document.getElementById('adminIsActive').checked
         };
         
         const password = document.getElementById('adminPassword').value;
+        if (!id && !password) {
+            showNotification('رمز عبور برای ساخت مدیر جدید الزامی است', 'error');
+            return;
+        }
         if (password) payload.password = password;
         
         const token = sessionStorage.getItem('adminToken');
@@ -1270,7 +1277,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             document.getElementById('adminModalTitle').textContent = 'ویرایش مدیر';
             document.getElementById('adminId').value = admin.id;
-            document.getElementById('adminEmail').value = admin.email;
+            document.getElementById('adminFormEmail').value = admin.email;
             document.getElementById('adminRole').value = admin.role;
             document.getElementById('adminIsActive').checked = admin.is_active;
             document.getElementById('adminPassword').value = '';
