@@ -749,9 +749,9 @@ async function generateCampaignEmail() {
     
     const userName = document.getElementById('campaignUserName')?.value?.trim() || '';
     
-    // Determine country from first recipient
-    let countryCode = 'USA'; // Default
-    if (state.campaignRecipients.length > 0) {
+    // Determine country from citizenship selection if provided, otherwise from recipients
+    let countryCode = state.citizenshipCountry || 'USA';
+    if (!state.citizenshipCountry && state.campaignRecipients.length > 0) {
         countryCode = state.campaignRecipients[0].country_code || 'USA';
     }
     
@@ -817,7 +817,7 @@ function renderCampaignEmailGroupCard(group, i) {
     const container = document.getElementById(`campaignGroup_${i}`);
     if (!container || !group) return;
     const recipientEmails = group.recipients.map(r => r.email).join(',');
-    const mailtoLink = `mailto:${recipientEmails}?subject=${encodeURIComponent(group.subject)}&body=${encodeURIComponent(group.body)}`;
+        const mailtoLink = `mailto:?bcc=${encodeURIComponent(recipientEmails)}&subject=${encodeURIComponent(group.subject)}&body=${encodeURIComponent(group.body)}`;
 
     container.innerHTML = `
         <div class="email-group-header">
@@ -828,6 +828,7 @@ function renderCampaignEmailGroupCard(group, i) {
             ${group.recipients.map(r => `<span class="recipient-chip">${r.name}</span>`).join('')}
         </div>
         <div class="email-preview">
+            <div class="email-bcc"><strong>BCC:</strong> ${recipientEmails}</div>
             <div class="email-subject"><strong>موضوع:</strong> ${group.subject}</div>
             <div class="email-body">${group.body.replace(/\\n/g, '<br>')}</div>
         </div>

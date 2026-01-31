@@ -1045,6 +1045,13 @@ body {
     margin-bottom: 24px;
 }
 
+.email-bcc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    word-break: break-word;
+}
+
 /* Step Navigation */
 .step-nav {
     display: flex;
