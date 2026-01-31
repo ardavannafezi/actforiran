@@ -193,7 +193,7 @@ async def get_ticker_messages(db: Session = Depends(get_db)):
 
 
 @router.post("/generate-email", response_model=GenerateEmailGroupsResponse)
-@limiter.limit("5/hour")
+@limiter.limit("60/hour")
 async def generate_email_endpoint(
     request: Request,
     payload: GenerateEmailRequest,

@@ -721,7 +721,31 @@ async function generateCampaignEmail() {
     const emailGroups = document.getElementById('campaignEmailGroups');
     if (!emailGroups) return;
     
-    emailGroups.innerHTML = '<div class="loading">در حال تولید ایمیل با هوش مصنوعی...</div>';
+    const recipientIds = Array.from(state.selectedRecipients);
+    if (recipientIds.length === 0) {
+        emailGroups.innerHTML = '<div class="error-message">گیرنده‌ای انتخاب نشده است</div>';
+        return;
+    }
+
+    const topicIds = Array.from(state.selectedTopics);
+    const totalGroups = Math.ceil(recipientIds.length / 15);
+    const groups = [];
+    for (let i = 0; i < recipientIds.length; i += 15) {
+        groups.push(recipientIds.slice(i, i + 15));
+    }
+
+    emailGroups.innerHTML = groups.map((_, i) => `
+        <div class="email-group-card loading-card" id="campaignGroup_${i}">
+            <div class="email-group-header">
+                <span class="email-group-number">گروه ${toPersian(i + 1)}</span>
+                <span class="email-group-count">در انتظار تولید...</span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" style="width: 0%"></div>
+            </div>
+            <div class="loading-text">در حال تولید گروه ${toPersian(i + 1)} از ${toPersian(totalGroups)}...</div>
+        </div>
+    `).join('');
     
     const userName = document.getElementById('campaignUserName')?.value?.trim() || '';
     
@@ -732,81 +756,91 @@ async function generateCampaignEmail() {
     }
     
     // For campaigns, we don't use topic_ids - the campaign has its own description
-    const payload = {
-        country_code: countryCode,
-        recipient_ids: Array.from(state.selectedRecipients),
-        topic_ids: [], // Campaigns don't use topics
-        sender_citizenship_status: state.citizenshipStatus,
-        user_name: userName || null,
-        campaign_id: state.selectedCampaign || null,
-        campaign_content: state.campaignDescription || null // Pass campaign's pre-written content
-    };
-    if (state.citizenshipCountry) {
-        payload.sender_citizenship_country_code = state.citizenshipCountry;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE}/api/v1/generate-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Failed to generate email');
+    state.generatedEmail.groups = [];
+    for (let i = 0; i < groups.length; i++) {
+        const groupIds = groups[i];
+        const payload = {
+            country_code: countryCode,
+            recipient_ids: groupIds,
+            topic_ids: topicIds,
+            sender_citizenship_status: state.citizenshipStatus,
+            user_name: userName || null,
+            campaign_id: state.selectedCampaign || null
+        };
+        if (state.citizenshipCountry) {
+            payload.sender_citizenship_country_code = state.citizenshipCountry;
         }
-        
-        const data = await response.json();
-        state.generatedEmail.groups = data.groups || [];
-        
-        renderCampaignEmailGroups();
-        
-    } catch (error) {
-        console.error('Error generating email:', error);
-        emailGroups.innerHTML = `<div class="error-message">خطا در تولید ایمیل: ${error.message}</div>`;
+
+        const card = document.getElementById(`campaignGroup_${i}`);
+        const bar = card?.querySelector('.progress-bar');
+        if (bar) bar.style.width = `${Math.round((i / totalGroups) * 100)}%`;
+
+        try {
+            const response = await fetch(`${API_BASE}/api/v1/generate-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                let errorDetail = 'Failed to generate email';
+                if (response.status === 524 || response.status === 504 || response.status === 502) {
+                    errorDetail = 'سرویس هوش مصنوعی موقتاً در دسترس نیست. لطفاً دوباره تلاش کنید.';
+                } else {
+                    try {
+                        const error = await response.json();
+                        errorDetail = error.detail || errorDetail;
+                    } catch (e) {}
+                }
+                throw new Error(errorDetail);
+            }
+
+            const data = await response.json();
+            const group = (data.groups || [])[0];
+            if (group) {
+                state.generatedEmail.groups[i] = group;
+                renderCampaignEmailGroupCard(group, i);
+            }
+        } catch (error) {
+            console.error('Error generating email:', error);
+            if (card) {
+                card.innerHTML = `<div class="error-message">خطا در تولید گروه ${toPersian(i + 1)}: ${error.message}</div>`;
+            }
+        } finally {
+            if (bar) bar.style.width = `${Math.round(((i + 1) / totalGroups) * 100)}%`;
+        }
     }
 }
 
-function renderCampaignEmailGroups() {
-    const container = document.getElementById('campaignEmailGroups');
-    if (!container) return;
-    
-    if (!state.generatedEmail.groups || state.generatedEmail.groups.length === 0) {
-        container.innerHTML = '<div class="loading">ایمیلی تولید نشد</div>';
-        return;
-    }
-    
-    container.innerHTML = state.generatedEmail.groups.map((group, i) => {
-        const recipientEmails = group.recipients.map(r => r.email).join(',');
-        const mailtoLink = `mailto:${recipientEmails}?subject=${encodeURIComponent(group.subject)}&body=${encodeURIComponent(group.body)}`;
-        
-        return `
-            <div class="email-group-card">
-                <div class="email-group-header">
-                    <span class="email-group-number">گروه ${toPersian(i + 1)}</span>
-                    <span class="email-group-count">${toPersian(group.recipients.length)} گیرنده</span>
-                </div>
-                <div class="email-recipients">
-                    ${group.recipients.map(r => `<span class="recipient-chip">${r.name}</span>`).join('')}
-                </div>
-                <div class="email-preview">
-                    <div class="email-subject"><strong>موضوع:</strong> ${group.subject}</div>
-                    <div class="email-body">${group.body.replace(/\\n/g, '<br>')}</div>
-                </div>
-                <div class="email-actions">
-                    <a href="${mailtoLink}" class="btn btn-primary" target="_blank">
-                        <span>📧</span>
-                        ارسال ایمیل
-                    </a>
-                    <button class="btn btn-secondary" onclick="copyCampaignEmailToClipboard(${i})">
-                        <span>📋</span>
-                        کپی متن
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
+function renderCampaignEmailGroupCard(group, i) {
+    const container = document.getElementById(`campaignGroup_${i}`);
+    if (!container || !group) return;
+    const recipientEmails = group.recipients.map(r => r.email).join(',');
+    const mailtoLink = `mailto:${recipientEmails}?subject=${encodeURIComponent(group.subject)}&body=${encodeURIComponent(group.body)}`;
+
+    container.innerHTML = `
+        <div class="email-group-header">
+            <span class="email-group-number">گروه ${toPersian(i + 1)}</span>
+            <span class="email-group-count">${toPersian(group.recipients.length)} گیرنده</span>
+        </div>
+        <div class="email-recipients">
+            ${group.recipients.map(r => `<span class="recipient-chip">${r.name}</span>`).join('')}
+        </div>
+        <div class="email-preview">
+            <div class="email-subject"><strong>موضوع:</strong> ${group.subject}</div>
+            <div class="email-body">${group.body.replace(/\\n/g, '<br>')}</div>
+        </div>
+        <div class="email-actions">
+            <a href="${mailtoLink}" class="btn btn-primary" target="_blank">
+                <span>📧</span>
+                ارسال ایمیل
+            </a>
+            <button class="btn btn-secondary" onclick="copyCampaignEmailToClipboard(${i})">
+                <span>📋</span>
+                کپی متن
+            </button>
+        </div>
+    `;
 }
 
 function copyCampaignEmailToClipboard(groupIndex) {
