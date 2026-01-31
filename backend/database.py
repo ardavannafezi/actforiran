@@ -120,6 +120,9 @@ def seed_defaults(db):
     fm_ministry_role = db.query(RecipientRole).filter_by(name="Foreign Ministry").first()
     sos_role = db.query(RecipientRole).filter_by(name="Secretary of State").first()
     chancellor_role = db.query(RecipientRole).filter_by(name="Chancellor").first()
+    mp_role = db.query(RecipientRole).filter_by(name="MP").first()
+    pm_adviser_role = db.query(RecipientRole).filter_by(name="Prime Minister Adviser").first()
+    adviser_team_role = db.query(RecipientRole).filter_by(name="Adviser Team").first()
     
     # Create sample recipients (all approved by super admin)
     recipients_data = [
@@ -209,6 +212,42 @@ def seed_defaults(db):
             {"full_name": "Ministry of Foreign Affairs", "email_address": "urm@urm.lt", "role_id": fm_ministry_role.id, "country_code": "LTU"},
             {"full_name": "Ministry of Foreign Affairs", "email_address": "comunicare@mae.ro", "role_id": fm_ministry_role.id, "country_code": "ROU"}
         ])
+
+    # United Kingdom recipients (from data file)
+    uk_recipients_file = os.path.join(os.path.dirname(__file__), "data", "uk_recipients.tsv")
+    role_map = {
+        "Prime Minister": pm_role,
+        "Foreign Ministry": fm_ministry_role or fm_role,
+        "Diplomatic protocol / diplomats": adviser_team_role or pm_adviser_role or fm_ministry_role,
+        "Prime Minister advisors": pm_adviser_role or adviser_team_role,
+        "Parliament": mp_role,
+    }
+
+    if os.path.exists(uk_recipients_file):
+        try:
+            with open(uk_recipients_file, "r", encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            for line in lines[1:]:
+                if not line.strip():
+                    continue
+                parts = [p.strip() for p in line.split("\t")]
+                if len(parts) < 4:
+                    continue
+                _, role_group, full_name, email = parts[0], parts[1], parts[2], parts[3]
+                if not email or email == "0" or "http" in email or "@" not in email:
+                    continue
+                role = role_map.get(role_group) or mp_role or fm_ministry_role or fm_role
+                if not role:
+                    continue
+                extra_recipients.append({
+                    "full_name": full_name,
+                    "email_address": email,
+                    "role_id": role.id,
+                    "country_code": "GBR",
+                    "custom_title": role_group,
+                })
+        except Exception as e:
+            print(f"⚠️  Failed to load UK recipients: {e}")
     else:
         print("⚠️ Foreign Ministry role missing; skipping foreign ministry contacts")
 
