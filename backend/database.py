@@ -524,6 +524,18 @@ def run_migrations(db: Session):
     except Exception as e:
         print(f"   ⚠️  Could not check political_recipients.media_outlets: {e}")
     
+    # Check advocacy_topics table for recipient_ids
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='advocacy_topics' AND column_name='recipient_ids'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE advocacy_topics ADD COLUMN recipient_ids JSONB")
+            print("   ➕ Need to add recipient_ids to advocacy_topics")
+    except Exception as e:
+        print(f"   ⚠️  Could not check advocacy_topics.recipient_ids: {e}")
+    
     # Auto-approve all existing topics (topics don't need approval)
     try:
         result = db.execute(text("""
