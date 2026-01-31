@@ -37,6 +37,7 @@ class TopicOut(BaseModel):
     slug: str
     display_title: str
     description: Optional[str] = None
+    country_code: Optional[str] = None
 
 
 class TopicsResponse(BaseModel):
@@ -215,7 +216,7 @@ class AdvocacyTopicAdminOut(BaseModel):
     slug: str
     display_title: str
     description: Optional[str] = None
-    country_code: str
+    country_code: Optional[str] = None
     country_name: Optional[str] = None
     recipient_ids: Optional[List[int]] = []
     approval_status: str

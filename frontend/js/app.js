@@ -120,7 +120,7 @@ function initStepper() {
             document.querySelector('.hero').style.display = 'none';
             elements.stepperContainer.classList.add('active');
             loadCountries();
-            loadTopics();
+            // Topics will be loaded when user selects a country
         };
     }
     
@@ -317,6 +317,7 @@ async function handleCountryChange(e, keepSelected = false) {
     state.selectedCountry = countryCode;
     if (!keepSelected) {
         state.selectedRecipients.clear();
+        state.selectedTopics.clear(); // Clear selected topics when country changes
     }
     state.recipientsPage = 1;
     state.recipientsHasMore = true;
@@ -332,6 +333,9 @@ async function handleCountryChange(e, keepSelected = false) {
         state.recipients = data.recipients || [];
         
         renderRecipients();
+        
+        // Also load topics for this country
+        await loadTopics(countryCode);
         
     } catch (error) {
         console.error('Error loading recipients:', error);
@@ -358,9 +362,15 @@ function updateCitizenshipCountryVisibility() {
     elements.citizenshipCountryGroup.style.display = shouldShow ? 'block' : 'none';
 }
 
-async function loadTopics() {
+async function loadTopics(countryCode = null) {
     try {
-        const response = await fetch(`${API_BASE}/api/v1/topics`);
+        // Build URL with optional country filter
+        let url = `${API_BASE}/api/v1/topics`;
+        if (countryCode) {
+            url += `?country_code=${countryCode}`;
+        }
+        
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to load topics');
         
         const data = await response.json();
@@ -434,11 +444,7 @@ function renderCampaigns() {
             <div class="campaign-meta">
                 <div class="campaign-meta-item">
                     <span>👥</span>
-                    <span>${campaign.recipient_ids.length} گیرنده</span>
-                </div>
-                <div class="campaign-meta-item">
-                    <span>📝</span>
-                    <span>${campaign.topic_ids.length} موضوع</span>
+                    <span>${(campaign.recipient_ids || []).length} گیرنده</span>
                 </div>
             </div>
         </div>
@@ -455,10 +461,9 @@ async function selectCampaign(campaignId) {
     state.campaignMode = true;
     state.selectedCampaign = campaign.id;
     
-    // Pre-fill selections
-    state.selectedCountry = campaign.country?.code || campaign.country_code || '';
-    state.selectedRecipients = new Set(campaign.recipient_ids);
-    state.selectedTopics = new Set(campaign.topic_ids);
+    // Pre-fill selections - campaigns only have recipients now
+    state.selectedRecipients = new Set(campaign.recipient_ids || []);
+    state.selectedTopics = new Set(); // User will select topics
     state.citizenshipCountry = null;
     
     // Hide hero, show stepper
@@ -466,26 +471,44 @@ async function selectCampaign(campaignId) {
     elements.stepperContainer.classList.add('active');
     showNotification('در حال آماده‌سازی کمپین...', 'info');
     
-    // Load data and move to step 3 (residency) since country/recipients/topics are pre-selected
+    // Load countries first
     await loadCountries();
-    await loadTopics();
-
-    if (elements.countrySelect) {
-        elements.countrySelect.value = state.selectedCountry;
-        await handleCountryChange({ target: { value: state.selectedCountry } }, true);
+    
+    // For campaigns, we need to get recipient details to determine country
+    // Load all recipients info and find the country from first recipient
+    try {
+        const recipientIds = campaign.recipient_ids || [];
+        if (recipientIds.length > 0) {
+            // Get first recipient's country
+            const response = await fetch(`${API_BASE}/api/v1/recipients`);
+            if (response.ok) {
+                const data = await response.json();
+                const recipients = data.recipients || [];
+                const firstRecipient = recipients.find(r => recipientIds.includes(r.id));
+                if (firstRecipient && firstRecipient.country_code) {
+                    state.selectedCountry = firstRecipient.country_code;
+                    if (elements.countrySelect) {
+                        elements.countrySelect.value = state.selectedCountry;
+                    }
+                    // Load recipients for this country
+                    await handleCountryChange({ target: { value: state.selectedCountry } }, true);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error determining campaign country:', error);
     }
 
-    // Ensure campaign selections are applied after recipients/topics load
-    state.selectedRecipients = new Set(campaign.recipient_ids);
-    state.selectedTopics = new Set(campaign.topic_ids);
+    // Ensure campaign selections are applied after recipients load
+    state.selectedRecipients = new Set(campaign.recipient_ids || []);
     renderRecipients();
     renderTopics();
 
-    // Jump to step 3 (citizenship/name step)
-    goToStep(3);
+    // Jump to step 2 (recipients step) - user may want to adjust or select topics
+    goToStep(2);
     updateCitizenshipCountryVisibility();
     
-    showNotification(`کمپین "${campaign.title}" انتخاب شد`, 'info');
+    showNotification(`کمپین "${campaign.title}" انتخاب شد - لطفاً موضوعات را انتخاب کنید`, 'info');
 }
 
 async function generateEmail() {
@@ -862,7 +885,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelector('.hero').style.display = 'none';
                 elements.stepperContainer.classList.add('active');
                 loadCountries();
-                loadTopics();
+                // Topics will be loaded when user selects a country
                 showNotification('خوش آمدید! لطفاً کشور را انتخاب کنید', 'success');
             } catch (error) {
                 console.error('❌ Error in start button handler:', error);

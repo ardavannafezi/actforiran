@@ -119,14 +119,20 @@ async def list_recipients(
 
 
 @router.get("/topics", response_model=TopicsResponse)
-async def list_topics(db: Session = Depends(get_db)):
-    topics = (
-        db.query(AdvocacyTopic)
-        .filter(AdvocacyTopic.is_active.is_(True))
-        .filter(AdvocacyTopic.approval_status == "approved")
-        .order_by(AdvocacyTopic.display_title)
-        .all()
+async def list_topics(
+    country_code: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(AdvocacyTopic).filter(
+        AdvocacyTopic.is_active.is_(True),
+        AdvocacyTopic.approval_status == "approved"
     )
+    
+    # Filter by country if provided
+    if country_code:
+        query = query.filter(AdvocacyTopic.country_code == country_code.upper())
+    
+    topics = query.order_by(AdvocacyTopic.display_title).all()
 
     return {
         "topics": [
@@ -135,6 +141,7 @@ async def list_topics(db: Session = Depends(get_db)):
                 "slug": t.slug,
                 "display_title": t.display_title,
                 "description": t.description,
+                "country_code": t.country_code,
             }
             for t in topics
         ]

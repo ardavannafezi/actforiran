@@ -1070,7 +1070,7 @@ async function loadCampaignAnalytics() {
         const uniqueUsers = overview.unique_users || 0;
         const activeCampaigns = overview.active_campaigns || 0;
         
-        console.log('Setting analytics values:', { totalEmails, successRate, uniqueUsers, activeCampaigns });
+        console.log('Setting analytics values:', { totalEmails, totalRequests, uniqueUsers, activeCampaigns });
         
         document.getElementById('analyticsTotal').textContent = toPersian(totalEmails);
         document.getElementById('analyticsSuccess').textContent = toPersian(totalRequests);
