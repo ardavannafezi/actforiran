@@ -600,6 +600,8 @@ async def list_topics(
             "slug": t.slug,
             "display_title": t.display_title,
             "description": t.description,
+            "country_code": t.country_code,
+            "country_name": t.country.name if t.country else None,
             "recipient_ids": t.recipient_ids or [],
             "approval_status": t.approval_status,
             "is_active": t.is_active,
@@ -626,6 +628,7 @@ async def create_topic(
             slug=payload.slug,
             display_title=payload.display_title,
             description=payload.description,
+            country_code=payload.country_code,
             recipient_ids=payload.recipient_ids if hasattr(payload, 'recipient_ids') else [],
             approval_status=approval_status,
             created_by_admin_id=admin.id,
@@ -651,6 +654,8 @@ async def create_topic(
             "slug": topic.slug,
             "display_title": topic.display_title,
             "description": topic.description,
+            "country_code": topic.country_code,
+            "country_name": topic.country.name if topic.country else None,
             "recipient_ids": topic.recipient_ids or [],
             "approval_status": topic.approval_status,
             "is_active": topic.is_active,
@@ -689,6 +694,8 @@ async def update_topic(
         topic.display_title = payload.display_title
     if payload.description is not None:
         topic.description = payload.description
+    if payload.country_code is not None:
+        topic.country_code = payload.country_code
     if payload.is_active is not None:
         topic.is_active = payload.is_active
     if hasattr(payload, 'recipient_ids') and payload.recipient_ids is not None:
@@ -722,6 +729,8 @@ async def update_topic(
         "slug": topic.slug,
         "display_title": topic.display_title,
         "description": topic.description,
+        "country_code": topic.country_code,
+        "country_name": topic.country.name if topic.country else None,
         "recipient_ids": topic.recipient_ids or [],
         "approval_status": topic.approval_status,
         "is_active": topic.is_active,
@@ -825,9 +834,7 @@ async def list_campaigns(
             "slug": c.slug,
             "description": c.description,
             "icon": c.icon,
-            "country_code": c.country_code,
             "recipient_ids": c.recipient_ids,
-            "topic_ids": c.topic_ids,
             "is_hot": c.is_hot,
             "is_active": c.is_active,
             "display_order": c.display_order,
@@ -850,9 +857,7 @@ async def list_pending_campaigns(
             "slug": c.slug,
             "description": c.description,
             "icon": c.icon,
-            "country_code": c.country_code,
             "recipient_ids": c.recipient_ids,
-            "topic_ids": c.topic_ids,
             "is_hot": c.is_hot,
             "is_active": c.is_active,
             "display_order": c.display_order,
@@ -873,17 +878,8 @@ async def create_campaign(
     if existing:
         raise HTTPException(status_code=400, detail="Slug already exists")
 
-    recipient_ids = payload.recipient_ids or []
-    topic_ids = payload.topic_ids or []
-    if not recipient_ids or not topic_ids:
-        raise HTTPException(status_code=400, detail="Recipients and topics are required")
-
-    country_code = payload.country_code
-    if not country_code:
-        first_recipient = db.query(PoliticalRecipient).filter(PoliticalRecipient.id == recipient_ids[0]).first()
-        if not first_recipient:
-            raise HTTPException(status_code=400, detail="Invalid recipients")
-        country_code = first_recipient.country_code
+    if not payload.recipient_ids or len(payload.recipient_ids) == 0:
+        raise HTTPException(status_code=400, detail="At least one recipient is required")
 
     approval_status = "approved" if admin.role == "super_admin" else "pending"
 
@@ -892,9 +888,7 @@ async def create_campaign(
         slug=payload.slug,
         description=payload.description,
         icon=payload.icon or "🔥",
-        country_code=country_code,
-        recipient_ids=recipient_ids,
-        topic_ids=topic_ids,
+        recipient_ids=payload.recipient_ids,
         is_hot=payload.is_hot,
         is_active=payload.is_active,
         display_order=payload.display_order,
@@ -915,9 +909,7 @@ async def create_campaign(
         "slug": campaign.slug,
         "description": campaign.description,
         "icon": campaign.icon,
-        "country_code": campaign.country_code,
         "recipient_ids": campaign.recipient_ids,
-        "topic_ids": campaign.topic_ids,
         "is_hot": campaign.is_hot,
         "is_active": campaign.is_active,
         "display_order": campaign.display_order,
@@ -945,12 +937,8 @@ async def update_campaign(
         campaign.description = payload.description
     if payload.icon is not None:
         campaign.icon = payload.icon
-    if payload.country_code is not None:
-        campaign.country_code = payload.country_code
     if payload.recipient_ids is not None:
         campaign.recipient_ids = payload.recipient_ids
-    if payload.topic_ids is not None:
-        campaign.topic_ids = payload.topic_ids
     if payload.is_hot is not None:
         campaign.is_hot = payload.is_hot
     if payload.is_active is not None:
@@ -975,9 +963,7 @@ async def update_campaign(
         "slug": campaign.slug,
         "description": campaign.description,
         "icon": campaign.icon,
-        "country_code": campaign.country_code,
         "recipient_ids": campaign.recipient_ids,
-        "topic_ids": campaign.topic_ids,
         "is_hot": campaign.is_hot,
         "is_active": campaign.is_active,
         "display_order": campaign.display_order,

@@ -324,9 +324,7 @@ def seed_defaults(db):
                 "description": "Urgent action needed: Iran is executing peaceful protesters. Contact your representatives to demand international intervention.",
                 "slug": "stop-executions",
                 "icon": "⚖️",
-                "country_code": "USA",
                 "recipient_ids": [r.id for r in us_recipients],
-                "topic_ids": [executions_topic.id, protesters_topic.id, sanctions_topic.id] if executions_topic and protesters_topic and sanctions_topic else [],
                 "is_hot": True,
                 "is_active": True,
                 "display_order": 1
@@ -336,9 +334,7 @@ def seed_defaults(db):
                 "description": "Join the global movement supporting Iranian women fighting for freedom. Urge UK officials to take action.",
                 "slug": "womens-rights-uk",
                 "icon": "✊",
-                "country_code": "GBR",
                 "recipient_ids": [r.id for r in uk_recipients],
-                "topic_ids": [womens_rights_topic.id, mahsa_topic.id] if womens_rights_topic and mahsa_topic else [],
                 "is_hot": True,
                 "is_active": True,
                 "display_order": 2
@@ -348,9 +344,7 @@ def seed_defaults(db):
                 "description": "Call on German government to impose stronger sanctions on Iranian officials responsible for human rights violations.",
                 "slug": "sanctions-germany",
                 "icon": "🚫",
-                "country_code": "DEU",
                 "recipient_ids": [r.id for r in germany_recipients],
-                "topic_ids": [sanctions_topic.id, executions_topic.id] if sanctions_topic and executions_topic else [],
                 "is_hot": True,
                 "is_active": True,
                 "display_order": 3
@@ -360,9 +354,7 @@ def seed_defaults(db):
                 "description": "Thousands of peaceful protesters are imprisoned in Iran. Contact French officials to demand their release.",
                 "slug": "free-prisoners-france",
                 "icon": "🔓",
-                "country_code": "FRA",
                 "recipient_ids": [r.id for r in france_recipients],
-                "topic_ids": [protesters_topic.id, sanctions_topic.id] if protesters_topic and sanctions_topic else [],
                 "is_hot": True,
                 "is_active": True,
                 "display_order": 4
@@ -372,9 +364,7 @@ def seed_defaults(db):
                 "description": "Stand with the Woman Life Freedom movement. Urge Canadian officials to support Iranian people's fight for democracy.",
                 "slug": "woman-life-freedom-canada",
                 "icon": "💜",
-                "country_code": "CAN",
                 "recipient_ids": [r.id for r in canada_recipients],
-                "topic_ids": [womens_rights_topic.id, mahsa_topic.id, sanctions_topic.id] if womens_rights_topic and mahsa_topic and sanctions_topic else [],
                 "is_hot": True,
                 "is_active": True,
                 "display_order": 5
@@ -382,7 +372,7 @@ def seed_defaults(db):
         ]
         
         for campaign_data in campaigns_data:
-            if campaign_data["recipient_ids"] and campaign_data["topic_ids"]:  # Only create if we have valid data
+            if campaign_data["recipient_ids"]:  # Only create if we have valid data
                 campaign = Campaign(
                     **campaign_data,
                     created_by_admin_id=super_admin.id,
@@ -524,7 +514,7 @@ def run_migrations(db: Session):
     except Exception as e:
         print(f"   ⚠️  Could not check political_recipients.media_outlets: {e}")
     
-    # Check advocacy_topics table for recipient_ids
+    # Check advocacy_topics table for recipient_ids and country_code
     try:
         result = db.execute(text("""
             SELECT column_name FROM information_schema.columns 
@@ -535,6 +525,34 @@ def run_migrations(db: Session):
             print("   ➕ Need to add recipient_ids to advocacy_topics")
     except Exception as e:
         print(f"   ⚠️  Could not check advocacy_topics.recipient_ids: {e}")
+    
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='advocacy_topics' AND column_name='country_code'
+        """))
+        if not result.fetchone():
+            migrations.append("ALTER TABLE advocacy_topics ADD COLUMN country_code VARCHAR(3) REFERENCES countries(code)")
+            print("   ➕ Need to add country_code to advocacy_topics")
+    except Exception as e:
+        print(f"   ⚠️  Could not check advocacy_topics.country_code: {e}")
+    
+    # Check campaigns table - remove topic_ids column if exists, ensure recipient_ids is NOT NULL
+    try:
+        result = db.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='campaigns' AND column_name='topic_ids'
+        """))
+        if result.fetchone():
+            # First set recipient_ids for campaigns that might not have it
+            migrations.append("UPDATE campaigns SET recipient_ids = '[]'::jsonb WHERE recipient_ids IS NULL")
+            # Then drop topic_ids
+            migrations.append("ALTER TABLE campaigns DROP COLUMN IF EXISTS topic_ids")
+            # Drop country_code too
+            migrations.append("ALTER TABLE campaigns DROP COLUMN IF EXISTS country_code")
+            print("   ➕ Need to remove topic_ids and country_code from campaigns")
+    except Exception as e:
+        print(f"   ⚠️  Could not check campaigns.topic_ids: {e}")
     
     # Auto-approve all existing topics (topics don't need approval)
     try:

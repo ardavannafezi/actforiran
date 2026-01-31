@@ -372,6 +372,12 @@
                 <form id="topicForm">
                     <input type="hidden" id="topicId">
                     <div class="form-group">
+                        <label>کشور</label>
+                        <select id="topicCountry" class="form-input" required>
+                            <option value="">انتخاب کشور...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label>عنوان نمایشی</label>
                         <input type="text" id="topicTitle" class="form-input" required>
                     </div>
@@ -386,7 +392,7 @@
                     <div class="form-group">
                         <label>گیرندگان (Recipients)</label>
                         <div id="topicRecipientsSelector" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
-                            <div style="color: var(--text-secondary);">در حال بارگذاری...</div>
+                            <div style="color: var(--text-secondary);">ابتدا کشور را انتخاب کنید</div>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">ذخیره</button>
@@ -420,10 +426,10 @@
                         <input type="text" id="campaignIcon" class="form-input" placeholder="🔥">
                     </div>
                     <div class="form-group">
-                        <label>موضوعات (چند انتخابی) - گیرندگان از موضوعات گرفته می‌شوند</label>
-                        <select id="campaignTopics" class="form-input" multiple size="6" required>
+                        <label>گیرندگان (چند انتخابی)</label>
+                        <select id="campaignRecipients" class="form-input" multiple size="10" required>
                         </select>
-                        <small style="color: var(--text-secondary);">با Ctrl/Cmd کلیک چند گزینه انتخاب کنید. گیرندگان بر اساس موضوعات انتخاب می‌شوند.</small>
+                        <small style="color: var(--text-secondary);">با Ctrl/Cmd کلیک چند گزینه انتخاب کنید</small>
                     </div>
                     <div class="form-group">
                         <label>

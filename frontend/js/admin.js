@@ -359,7 +359,7 @@ async function loadTopics() {
         const tbody = document.getElementById('topicsTableBody');
         
         if (topics.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="loading">موضوعی یافت نشد</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="loading">موضوعی یافت نشد</td></tr>';
             return;
         }
         
@@ -367,6 +367,7 @@ async function loadTopics() {
             <tr>
                 <td>${t.display_title}</td>
                 <td><code>${t.slug}</code></td>
+                <td>${t.country_name || t.country_code || '-'}</td>
                 <td>${t.description || '-'}</td>
                 <td>${toPersian(t.recipient_ids ? t.recipient_ids.length : 0)} گیرنده</td>
                 <td class="actions">
@@ -379,7 +380,7 @@ async function loadTopics() {
     } catch (error) {
         console.error('Error loading topics:', error);
         document.getElementById('topicsTableBody').innerHTML = 
-            '<tr><td colspan="5" class="loading">خطا در بارگذاری</td></tr>';
+            '<tr><td colspan="6" class="loading">خطا در بارگذاری</td></tr>';
     }
 }
 
@@ -487,19 +488,90 @@ document.getElementById('addTopicBtn').addEventListener('click', async () => {
     document.getElementById('topicForm').reset();
     document.getElementById('topicId').value = '';
     
-    // Ensure recipients are loaded
-    if (!recipientsAdmin || recipientsAdmin.length === 0) {
-        await loadRecipients();
-    }
+    // Load countries for selector
+    await loadCountriesForTopic();
     
-    renderTopicRecipientsSelector([]);
+    // Clear recipients - user must select country first
+    document.getElementById('topicRecipientsSelector').innerHTML = 
+        '<div style="color: var(--text-secondary);">ابتدا کشور را انتخاب کنید</div>';
+    
     openModal('topicModal');
 });
+
+// Load countries for topic selector
+async function loadCountriesForTopic() {
+    const select = document.getElementById('topicCountry');
+    if (!select) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/countries`);
+        const data = await response.json();
+        const countryList = data.countries || [];
+        
+        select.innerHTML = '<option value="">انتخاب کشور...</option>' +
+            countryList.map(c => `<option value="${c.code}">${c.flag || ''} ${c.name_persian || c.name}</option>`).join('');
+    } catch (error) {
+        console.error('Error loading countries:', error);
+    }
+}
+
+// Handle country change in topic modal - load recipients for that country
+function setupTopicCountryHandler() {
+    const countrySelect = document.getElementById('topicCountry');
+    if (countrySelect) {
+        countrySelect.addEventListener('change', async (e) => {
+            const countryCode = e.target.value;
+            const container = document.getElementById('topicRecipientsSelector');
+            
+            if (!countryCode) {
+                container.innerHTML = '<div style="color: var(--text-secondary);">ابتدا کشور را انتخاب کنید</div>';
+                return;
+            }
+            
+            container.innerHTML = '<div style="color: var(--text-secondary);">در حال بارگذاری...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/recipients?country_code=${countryCode}`);
+                const data = await response.json();
+                const recipients = data.recipients || [];
+                
+                renderTopicRecipientsForCountry(recipients, []);
+            } catch (error) {
+                console.error('Error loading recipients for country:', error);
+                container.innerHTML = '<div style="color: var(--error);">خطا در بارگذاری</div>';
+            }
+        });
+    }
+}
+
+// Render recipients for topic based on selected country
+function renderTopicRecipientsForCountry(recipients, selectedIds = []) {
+    const container = document.getElementById('topicRecipientsSelector');
+    if (!container) return;
+    
+    if (!recipients || recipients.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-secondary);">گیرنده‌ای برای این کشور یافت نشد</div>';
+        return;
+    }
+    
+    container.innerHTML = recipients.map(r => `
+        <label style="display: flex; align-items: center; padding: 8px; cursor: pointer; border-radius: 4px; margin-bottom: 4px; background: var(--bg-surface);">
+            <input type="checkbox" value="${r.id}" ${selectedIds.includes(r.id) ? 'checked' : ''} style="margin-left: 8px;">
+            <span style="flex: 1;">${r.full_name} - ${r.display_title || ''}</span>
+        </label>
+    `).join('');
+}
 
 document.getElementById('topicForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const id = document.getElementById('topicId').value;
+    const countryCode = document.getElementById('topicCountry').value;
+    
+    if (!countryCode) {
+        showNotification('کشور را انتخاب کنید', 'error');
+        return;
+    }
     
     // Get selected recipients
     const selectedRecipients = Array.from(
@@ -510,6 +582,7 @@ document.getElementById('topicForm').addEventListener('submit', async (e) => {
         display_title: document.getElementById('topicTitle').value,
         slug: document.getElementById('topicSlug').value,
         description: document.getElementById('topicDescription').value || null,
+        country_code: countryCode,
         recipient_ids: selectedRecipients
     };
     
@@ -574,7 +647,22 @@ async function editTopic(id) {
                 document.getElementById('topicTitle').value = topic.display_title;
                 document.getElementById('topicSlug').value = topic.slug;
                 document.getElementById('topicDescription').value = topic.description || '';
-                renderTopicRecipientsSelector(topic.recipient_ids || []);
+                
+                // Load countries and select the topic's country
+                await loadCountriesForTopic();
+                document.getElementById('topicCountry').value = topic.country_code || '';
+                
+                // Load recipients for that country and select the ones in the topic
+                if (topic.country_code) {
+                    const recipientsResponse = await fetch(`${API_BASE}/api/v1/recipients?country_code=${topic.country_code}`);
+                    const recipientsData = await recipientsResponse.json();
+                    const recipients = recipientsData.recipients || [];
+                    renderTopicRecipientsForCountry(recipients, topic.recipient_ids || []);
+                } else {
+                    document.getElementById('topicRecipientsSelector').innerHTML = 
+                        '<div style="color: var(--text-secondary);">ابتدا کشور را انتخاب کنید</div>';
+                }
+                
                 openModal('topicModal');
             }
         }
@@ -715,6 +803,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup ticker form
     setupTickerForm();
     
+    // Setup topic country change handler
+    setupTopicCountryHandler();
+    
     // Check auth
     checkAuth();
 });
@@ -760,15 +851,14 @@ function renderCampaigns() {
             <div class="campaign-admin-info">
                 <div class="campaign-admin-title">${campaign.title}</div>
                 <div class="campaign-admin-country">
-                    <span>Recipients: ${campaign.recipient_ids.length}</span>
+                    <span>Recipients: ${campaign.recipient_ids ? campaign.recipient_ids.length : 0}</span>
                 </div>
             </div>
             </div>
             <div class="campaign-admin-description">${campaign.description || ''}</div>
             <div class="campaign-admin-stats">
                 <span>📧 ${campaign.email_count || 0} ایمیل</span>
-                <span>👥 ${campaign.recipient_ids.length} گیرنده</span>
-                <span>📝 ${campaign.topic_ids.length} موضوع</span>
+                <span>👥 ${campaign.recipient_ids ? campaign.recipient_ids.length : 0} گیرنده</span>
                 ${campaign.is_hot ? '<span style="color: var(--accent-red);">🔥 داغ</span>' : ''}
             </div>
             <div class="campaign-admin-actions">
@@ -784,15 +874,28 @@ async function openCampaignModal(campaignId = null) {
     const title = document.getElementById('campaignModalTitle');
     const form = document.getElementById('campaignForm');
     
-    // Load topics for select
-    await loadAllTopics();
+    // Load ALL recipients grouped by country for the campaign
+    await loadRecipientsForCampaign();
     
-    // Populate topics select
-    const topicsSelect = document.getElementById('campaignTopics');
-    topicsSelect.innerHTML = campaignTopics.map(t => {
-        const recipientCount = t.recipient_ids ? t.recipient_ids.length : 0;
-        return `<option value="${t.id}">${t.display_title} (${toPersian(recipientCount)} گیرنده)</option>`;
-    }).join('');
+    // Populate recipients select
+    const recipientsSelect = document.getElementById('campaignRecipients');
+    if (campaignRecipients && campaignRecipients.length > 0) {
+        // Group by country
+        const byCountry = {};
+        campaignRecipients.forEach(r => {
+            const country = r.country_name || r.country_code || 'سایر';
+            if (!byCountry[country]) byCountry[country] = [];
+            byCountry[country].push(r);
+        });
+        
+        recipientsSelect.innerHTML = Object.entries(byCountry).map(([country, recipients]) => {
+            return `<optgroup label="${country}">
+                ${recipients.map(r => `<option value="${r.id}">${r.full_name} - ${r.display_title || ''}</option>`).join('')}
+            </optgroup>`;
+        }).join('');
+    } else {
+        recipientsSelect.innerHTML = '<option value="">گیرنده‌ای یافت نشد</option>';
+    }
     
     if (campaignId) {
         // Edit mode
@@ -808,9 +911,9 @@ async function openCampaignModal(campaignId = null) {
         document.getElementById('campaignIsHot').checked = campaign.is_hot;
         document.getElementById('campaignDisplayOrder').value = campaign.display_order || 0;
         
-        // Select topics
-        Array.from(document.getElementById('campaignTopics').options).forEach(opt => {
-            opt.selected = campaign.topic_ids.includes(parseInt(opt.value));
+        // Select recipients that are in the campaign
+        Array.from(recipientsSelect.options).forEach(opt => {
+            opt.selected = (campaign.recipient_ids || []).includes(parseInt(opt.value));
         });
     } else {
         // Add mode
@@ -822,32 +925,32 @@ async function openCampaignModal(campaignId = null) {
     modal.classList.add('active');
 }
 
-async function loadAllTopics() {
+// Load all recipients for campaign modal
+async function loadRecipientsForCampaign() {
     try {
-        const response = await fetch(`${API_BASE}/api/v1/admin/topics`, {
+        const response = await fetch(`${API_BASE}/api/v1/recipients`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (!response.ok) throw new Error('Failed to load topics');
+        if (!response.ok) throw new Error('Failed to load recipients');
         
         const data = await response.json();
-        campaignTopics = Array.isArray(data) ? data : (data.topics || []);
+        campaignRecipients = data.recipients || [];
         
     } catch (error) {
-        console.error('Error loading topics:', error);
+        console.error('Error loading recipients for campaign:', error);
+        campaignRecipients = [];
     }
 }
-
-// Removed campaign recipient loading functions - recipients now come from topics
 
 async function saveCampaign(e) {
     e.preventDefault();
     
     const campaignId = document.getElementById('campaignId').value;
-    const topicIds = Array.from(document.getElementById('campaignTopics').selectedOptions).map(opt => parseInt(opt.value));
+    const recipientIds = Array.from(document.getElementById('campaignRecipients').selectedOptions).map(opt => parseInt(opt.value));
     
-    if (topicIds.length === 0) {
-        showNotification('حداقل یک موضوع انتخاب کنید', 'error');
+    if (recipientIds.length === 0) {
+        showNotification('حداقل یک گیرنده انتخاب کنید', 'error');
         return;
     }
     
@@ -856,7 +959,7 @@ async function saveCampaign(e) {
         slug: document.getElementById('campaignSlug').value,
         description: document.getElementById('campaignDescription').value || '',
         icon: document.getElementById('campaignIcon').value || '🔥',
-        topic_ids: topicIds,
+        recipient_ids: recipientIds,
         is_hot: document.getElementById('campaignIsHot').checked,
         display_order: parseInt(document.getElementById('campaignDisplayOrder').value) || 0,
         is_active: true

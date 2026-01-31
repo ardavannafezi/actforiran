@@ -80,6 +80,7 @@ class AdvocacyTopic(Base):
     slug = Column(String(100), unique=True, nullable=False)
     display_title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
+    country_code = Column(String(3), ForeignKey("countries.code"), nullable=False)  # Topics belong to countries
     recipient_ids = Column(JSONB, nullable=True, default=list)  # Array of recipient IDs for this topic
     is_active = Column(Boolean, default=True)
     approval_status = Column(String(20), default="approved")  # Topics are auto-approved
@@ -87,6 +88,9 @@ class AdvocacyTopic(Base):
     approved_by_admin_id = Column(Integer, ForeignKey("administrators.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    country = relationship("Country")
 
 class Campaign(Base):
     """Predefined campaigns (hot topics) set by admins"""
@@ -98,10 +102,8 @@ class Campaign(Base):
     slug = Column(String(100), unique=True, nullable=False, index=True)
     icon = Column(String(10), nullable=True)  # Emoji icon
     
-    # Predefined selections
-    country_code = Column(String(3), ForeignKey("countries.code"), nullable=True)  # Optional for backwards compatibility
-    recipient_ids = Column(JSONB, nullable=True, default=list)  # Array of recipient IDs (optional - can get from topics)
-    topic_ids = Column(JSONB, nullable=False)  # Array of topic IDs
+    # Campaigns only have recipients (admin-managed)
+    recipient_ids = Column(JSONB, nullable=False)  # Array of recipient IDs
     
     # Settings
     is_hot = Column(Boolean, default=False)  # Show on main page
@@ -116,7 +118,6 @@ class Campaign(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    country = relationship("Country")
     created_by = relationship("Administrator", foreign_keys=[created_by_admin_id])
     approved_by = relationship("Administrator", foreign_keys=[approved_by_admin_id])
 

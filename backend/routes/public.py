@@ -158,7 +158,6 @@ async def list_campaigns(db: Session = Depends(get_db)):
     
     result = []
     for campaign in campaigns:
-        country = db.query(Country).filter(Country.code == campaign.country_code).first()
         result.append({
             "id": campaign.id,
             "title": campaign.title,
@@ -167,14 +166,7 @@ async def list_campaigns(db: Session = Depends(get_db)):
             "icon": campaign.icon or "🔥",
             "is_hot": campaign.is_hot,
             "is_active": campaign.is_active,
-            "country": {
-                "code": campaign.country_code,
-                "name": country.name if country else "",
-                "name_persian": country.name_persian if country else "",
-                "flag": get_country_flag(campaign.country_code)
-            },
-            "recipient_ids": campaign.recipient_ids,
-            "topic_ids": campaign.topic_ids
+            "recipient_ids": campaign.recipient_ids or []
         })
     
     return {"campaigns": result}

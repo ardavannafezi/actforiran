@@ -189,6 +189,7 @@ class AdvocacyTopicCreate(BaseModel):
     slug: str
     display_title: str
     description: Optional[str] = None
+    country_code: str
     recipient_ids: Optional[List[int]] = []
 
     _slug_no_html = validator("slug", allow_reuse=True)(_sanitize_text)
@@ -200,6 +201,7 @@ class AdvocacyTopicUpdate(BaseModel):
     slug: Optional[str] = None
     display_title: Optional[str] = None
     description: Optional[str] = None
+    country_code: Optional[str] = None
     is_active: Optional[bool] = None
     recipient_ids: Optional[List[int]] = None
 
@@ -213,6 +215,8 @@ class AdvocacyTopicAdminOut(BaseModel):
     slug: str
     display_title: str
     description: Optional[str] = None
+    country_code: str
+    country_name: Optional[str] = None
     recipient_ids: Optional[List[int]] = []
     approval_status: str
     is_active: bool
@@ -227,9 +231,7 @@ class CampaignCreate(BaseModel):
     slug: str
     description: Optional[str] = None
     icon: Optional[str] = None
-    country_code: Optional[str] = None
-    recipient_ids: Optional[List[int]] = []
-    topic_ids: List[int]
+    recipient_ids: List[int]  # Required list of recipients
     is_hot: bool = False
     display_order: int = 0
     is_active: bool = True
@@ -245,9 +247,7 @@ class CampaignUpdate(BaseModel):
     slug: Optional[str] = None
     description: Optional[str] = None
     icon: Optional[str] = None
-    country_code: Optional[str] = None
     recipient_ids: Optional[List[int]] = None
-    topic_ids: Optional[List[int]] = None
     is_hot: Optional[bool] = None
     display_order: Optional[int] = None
     is_active: Optional[bool] = None
@@ -264,9 +264,7 @@ class CampaignOut(BaseModel):
     slug: str
     description: Optional[str] = None
     icon: Optional[str] = None
-    country_code: Optional[str] = None
     recipient_ids: List[int]
-    topic_ids: List[int]
     is_hot: bool
     is_active: bool
     display_order: int
