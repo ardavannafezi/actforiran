@@ -372,10 +372,10 @@
                 <form id="topicForm">
                     <input type="hidden" id="topicId">
                     <div class="form-group">
-                        <label>کشور</label>
-                        <select id="topicCountry" class="form-input" required>
-                            <option value="">انتخاب کشور...</option>
+                        <label>کشورها (چند کشور انتخاب کنید)</label>
+                        <select id="topicCountries" class="form-input" multiple required style="height: 150px;">
                         </select>
+                        <small style="color: var(--text-secondary);">Ctrl+Click برای انتخاب چندتایی</small>
                     </div>
                     <div class="form-group">
                         <label>عنوان نمایشی</label>
@@ -390,9 +390,9 @@
                         <textarea id="topicDescription" class="form-textarea" rows="4"></textarea>
                     </div>
                     <div class="form-group">
-                        <label>گیرندگان (Recipients)</label>
+                        <label>گیرندگان (Recipients) - از تمام کشورهای انتخابی</label>
                         <div id="topicRecipientsSelector" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
-                            <div style="color: var(--text-secondary);">ابتدا کشور را انتخاب کنید</div>
+                            <div style="color: var(--text-secondary);">ابتدا کشورها را انتخاب کنید</div>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">ذخیره</button>

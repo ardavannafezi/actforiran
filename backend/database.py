@@ -514,7 +514,7 @@ def run_migrations(db: Session):
     except Exception as e:
         print(f"   ⚠️  Could not check political_recipients.media_outlets: {e}")
     
-    # Check advocacy_topics table for recipient_ids and country_code
+    # Check advocacy_topics table for recipient_ids and country_codes (multi-country support)
     try:
         result = db.execute(text("""
             SELECT column_name FROM information_schema.columns 
@@ -526,16 +526,35 @@ def run_migrations(db: Session):
     except Exception as e:
         print(f"   ⚠️  Could not check advocacy_topics.recipient_ids: {e}")
     
+    # Check if we need to migrate from country_code (single) to country_codes (array)
     try:
         result = db.execute(text("""
             SELECT column_name FROM information_schema.columns 
-            WHERE table_name='advocacy_topics' AND column_name='country_code'
+            WHERE table_name='advocacy_topics' AND column_name='country_codes'
         """))
         if not result.fetchone():
-            migrations.append("ALTER TABLE advocacy_topics ADD COLUMN country_code VARCHAR(3) REFERENCES countries(code)")
-            print("   ➕ Need to add country_code to advocacy_topics")
+            # country_codes column doesn't exist - add it
+            migrations.append("ALTER TABLE advocacy_topics ADD COLUMN country_codes JSONB DEFAULT '[]'::jsonb")
+            print("   ➕ Need to add country_codes (JSONB) to advocacy_topics")
+            
+            # Check if old country_code column exists and migrate data
+            result2 = db.execute(text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name='advocacy_topics' AND column_name='country_code'
+            """))
+            if result2.fetchone():
+                # Migrate data from country_code to country_codes array
+                migrations.append("""
+                    UPDATE advocacy_topics 
+                    SET country_codes = CASE 
+                        WHEN country_code IS NOT NULL THEN jsonb_build_array(country_code) 
+                        ELSE '[]'::jsonb 
+                    END
+                """)
+                migrations.append("ALTER TABLE advocacy_topics DROP COLUMN IF EXISTS country_code")
+                print("   ➕ Will migrate country_code → country_codes")
     except Exception as e:
-        print(f"   ⚠️  Could not check advocacy_topics.country_code: {e}")
+        print(f"   ⚠️  Could not check advocacy_topics.country_codes: {e}")
     
     # Check campaigns table - remove topic_ids column if exists, ensure recipient_ids is NOT NULL
     try:

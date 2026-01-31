@@ -363,19 +363,26 @@ async function loadTopics() {
             return;
         }
         
-        tbody.innerHTML = topics.map(t => `
-            <tr>
-                <td>${t.display_title}</td>
-                <td><code>${t.slug}</code></td>
-                <td>${t.country_name || t.country_code || '-'}</td>
-                <td>${t.description || '-'}</td>
-                <td>${toPersian(t.recipient_ids ? t.recipient_ids.length : 0)} گیرنده</td>
-                <td class="actions">
-                    <button class="btn btn-secondary btn-sm" onclick="editTopic(${t.id})">ویرایش</button>
-                    <button class="btn btn-secondary btn-sm" onclick="deleteTopic(${t.id})">حذف</button>
-                </td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = topics.map(t => {
+            // Display country names (array) or fall back to country_codes
+            const countryDisplay = t.country_names && t.country_names.length > 0 
+                ? t.country_names.join('، ') 
+                : (t.country_codes && t.country_codes.length > 0 ? t.country_codes.join(', ') : '-');
+            
+            return `
+                <tr>
+                    <td>${t.display_title}</td>
+                    <td><code>${t.slug}</code></td>
+                    <td>${countryDisplay}</td>
+                    <td>${t.description || '-'}</td>
+                    <td>${toPersian(t.recipient_ids ? t.recipient_ids.length : 0)} گیرنده</td>
+                    <td class="actions">
+                        <button class="btn btn-secondary btn-sm" onclick="editTopic(${t.id})">ویرایش</button>
+                        <button class="btn btn-secondary btn-sm" onclick="deleteTopic(${t.id})">حذف</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
         
     } catch (error) {
         console.error('Error loading topics:', error);
@@ -488,19 +495,21 @@ document.getElementById('addTopicBtn').addEventListener('click', async () => {
     document.getElementById('topicForm').reset();
     document.getElementById('topicId').value = '';
     
-    // Load countries for selector
+    // Load countries for selector and deselect all
     await loadCountriesForTopic();
+    const countriesSelect = document.getElementById('topicCountries');
+    Array.from(countriesSelect.options).forEach(opt => opt.selected = false);
     
-    // Clear recipients - user must select country first
+    // Clear recipients - user must select countries first
     document.getElementById('topicRecipientsSelector').innerHTML = 
-        '<div style="color: var(--text-secondary);">ابتدا کشور را انتخاب کنید</div>';
+        '<div style="color: var(--text-secondary);">ابتدا کشورها را انتخاب کنید</div>';
     
     openModal('topicModal');
 });
 
-// Load countries for topic selector
+// Load countries for topic selector (multi-select)
 async function loadCountriesForTopic() {
-    const select = document.getElementById('topicCountry');
+    const select = document.getElementById('topicCountries');
     if (!select) return;
     
     try {
@@ -508,39 +517,50 @@ async function loadCountriesForTopic() {
         const data = await response.json();
         const countryList = data.countries || [];
         
-        select.innerHTML = '<option value="">انتخاب کشور...</option>' +
-            countryList.map(c => `<option value="${c.code}">${c.flag || ''} ${c.name_persian || c.name}</option>`).join('');
+        select.innerHTML = countryList.map(c => 
+            `<option value="${c.code}">${c.flag || ''} ${c.name_persian || c.name}</option>`
+        ).join('');
     } catch (error) {
         console.error('Error loading countries:', error);
     }
 }
 
-// Handle country change in topic modal - load recipients for that country
+// Handle country change in topic modal - load recipients for selected countries
 function setupTopicCountryHandler() {
-    const countrySelect = document.getElementById('topicCountry');
+    const countrySelect = document.getElementById('topicCountries');
     if (countrySelect) {
         countrySelect.addEventListener('change', async (e) => {
-            const countryCode = e.target.value;
-            const container = document.getElementById('topicRecipientsSelector');
-            
-            if (!countryCode) {
-                container.innerHTML = '<div style="color: var(--text-secondary);">ابتدا کشور را انتخاب کنید</div>';
-                return;
-            }
-            
-            container.innerHTML = '<div style="color: var(--text-secondary);">در حال بارگذاری...</div>';
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/v1/recipients?country_code=${countryCode}`);
-                const data = await response.json();
-                const recipients = data.recipients || [];
-                
-                renderTopicRecipientsForCountry(recipients, []);
-            } catch (error) {
-                console.error('Error loading recipients for country:', error);
-                container.innerHTML = '<div style="color: var(--error);">خطا در بارگذاری</div>';
-            }
+            const selectedCodes = Array.from(e.target.selectedOptions).map(opt => opt.value);
+            await loadTopicRecipientsForCountries(selectedCodes, []);
         });
+    }
+}
+
+// Load recipients from multiple countries
+async function loadTopicRecipientsForCountries(countryCodes, selectedIds = []) {
+    const container = document.getElementById('topicRecipientsSelector');
+    
+    if (!countryCodes || countryCodes.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-secondary);">ابتدا کشورها را انتخاب کنید</div>';
+        return;
+    }
+    
+    container.innerHTML = '<div style="color: var(--text-secondary);">در حال بارگذاری...</div>';
+    
+    try {
+        // Fetch recipients from all selected countries
+        const allRecipients = [];
+        for (const code of countryCodes) {
+            const response = await fetch(`${API_BASE}/api/v1/recipients?country_code=${code}`);
+            const data = await response.json();
+            const recipients = data.recipients || [];
+            allRecipients.push(...recipients);
+        }
+        
+        renderTopicRecipientsForCountry(allRecipients, selectedIds);
+    } catch (error) {
+        console.error('Error loading recipients for countries:', error);
+        container.innerHTML = '<div style="color: var(--error);">خطا در بارگذاری</div>';
     }
 }
 
@@ -566,10 +586,11 @@ document.getElementById('topicForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const id = document.getElementById('topicId').value;
-    const countryCode = document.getElementById('topicCountry').value;
+    const countriesSelect = document.getElementById('topicCountries');
+    const selectedCountries = Array.from(countriesSelect.selectedOptions).map(opt => opt.value);
     
-    if (!countryCode) {
-        showNotification('کشور را انتخاب کنید', 'error');
+    if (!selectedCountries || selectedCountries.length === 0) {
+        showNotification('حداقل یک کشور انتخاب کنید', 'error');
         return;
     }
     
@@ -582,7 +603,7 @@ document.getElementById('topicForm').addEventListener('submit', async (e) => {
         display_title: document.getElementById('topicTitle').value,
         slug: document.getElementById('topicSlug').value,
         description: document.getElementById('topicDescription').value || null,
-        country_code: countryCode,
+        country_codes: selectedCountries,  // Array of country codes
         recipient_ids: selectedRecipients
     };
     
@@ -648,19 +669,22 @@ async function editTopic(id) {
                 document.getElementById('topicSlug').value = topic.slug;
                 document.getElementById('topicDescription').value = topic.description || '';
                 
-                // Load countries and select the topic's country
+                // Load countries and select the topic's countries
                 await loadCountriesForTopic();
-                document.getElementById('topicCountry').value = topic.country_code || '';
+                const countriesSelect = document.getElementById('topicCountries');
+                const countryCodes = topic.country_codes || [];
                 
-                // Load recipients for that country and select the ones in the topic
-                if (topic.country_code) {
-                    const recipientsResponse = await fetch(`${API_BASE}/api/v1/recipients?country_code=${topic.country_code}`);
-                    const recipientsData = await recipientsResponse.json();
-                    const recipients = recipientsData.recipients || [];
-                    renderTopicRecipientsForCountry(recipients, topic.recipient_ids || []);
+                // Select multiple countries
+                Array.from(countriesSelect.options).forEach(opt => {
+                    opt.selected = countryCodes.includes(opt.value);
+                });
+                
+                // Load recipients for those countries and select the ones in the topic
+                if (countryCodes.length > 0) {
+                    await loadTopicRecipientsForCountries(countryCodes, topic.recipient_ids || []);
                 } else {
                     document.getElementById('topicRecipientsSelector').innerHTML = 
-                        '<div style="color: var(--text-secondary);">ابتدا کشور را انتخاب کنید</div>';
+                        '<div style="color: var(--text-secondary);">ابتدا کشورها را انتخاب کنید</div>';
                 }
                 
                 openModal('topicModal');
@@ -1393,8 +1417,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <p class="campaign-admin-description">${campaign.description || ''}</p>
                     <div class="campaign-admin-meta">
-                        <span>👥 ${campaign.recipient_ids.length} گیرنده</span>
-                        <span>📋 ${campaign.topic_ids.length} موضوع</span>
+                        <span>👥 ${(campaign.recipient_ids || []).length} گیرنده</span>
                     </div>
                     <div class="campaign-admin-actions" style="margin-top: 16px;">
                         <button class="btn btn-success" onclick="approveCampaign(${campaign.id})" style="flex: 1;">✅ تایید</button>

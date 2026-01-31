@@ -128,11 +128,12 @@ async def list_topics(
         AdvocacyTopic.approval_status == "approved"
     )
     
-    # Filter by country if provided
-    if country_code:
-        query = query.filter(AdvocacyTopic.country_code == country_code.upper())
-    
     topics = query.order_by(AdvocacyTopic.display_title).all()
+    
+    # Filter by country if provided - topic matches if country_code is in its country_codes array
+    if country_code:
+        country_upper = country_code.upper()
+        topics = [t for t in topics if country_upper in (t.country_codes or [])]
 
     return {
         "topics": [
@@ -141,7 +142,7 @@ async def list_topics(
                 "slug": t.slug,
                 "display_title": t.display_title,
                 "description": t.description,
-                "country_code": t.country_code,
+                "country_codes": t.country_codes or [],
             }
             for t in topics
         ]

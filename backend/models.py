@@ -80,7 +80,7 @@ class AdvocacyTopic(Base):
     slug = Column(String(100), unique=True, nullable=False)
     display_title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    country_code = Column(String(3), ForeignKey("countries.code"), nullable=False)  # Topics belong to countries
+    country_codes = Column(JSONB, nullable=False, default=list)  # Array of country codes - topics can belong to multiple countries
     recipient_ids = Column(JSONB, nullable=True, default=list)  # Array of recipient IDs for this topic
     is_active = Column(Boolean, default=True)
     approval_status = Column(String(20), default="approved")  # Topics are auto-approved
@@ -88,9 +88,6 @@ class AdvocacyTopic(Base):
     approved_by_admin_id = Column(Integer, ForeignKey("administrators.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    
-    # Relationships
-    country = relationship("Country")
 
 class Campaign(Base):
     """Predefined campaigns (hot topics) set by admins"""

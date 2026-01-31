@@ -41,17 +41,37 @@
 
         <!-- Main Content -->
         <main class="main">
-            <!-- Hot Campaigns Section - Redesigned -->
-            <section class="campaigns-section" id="campaignsSection" style="margin: 48px auto; max-width: 1200px; padding: 0 24px;">
-                <div class="campaigns-header" style="text-align: center; margin-bottom: 40px;">
-                    <div style="display: inline-flex; align-items: center; gap: 12px; background: linear-gradient(135deg, #ff6b6b, #ee5a24); padding: 8px 24px; border-radius: 50px; margin-bottom: 16px;">
-                        <span style="font-size: 24px;">🔥</span>
-                        <span style="color: white; font-weight: 700; font-size: 14px; letter-spacing: 1px;">کمپین‌های فعال</span>
-                    </div>
-                    <h2 style="font-size: 32px; margin-bottom: 12px; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">با یک کلیک، صدای ایران باشید</h2>
-                    <p style="color: var(--text-secondary); font-size: 16px; max-width: 600px; margin: 0 auto;">کمپین‌های آماده با گیرندگان از پیش انتخاب شده — فقط موضوع را انتخاب کنید و ایمیل بفرستید</p>
+            <!-- Hero Section -->
+            <section class="hero">
+                <h1>وقتی متحد باشیم، جهان صدای ما را می‌شنود</h1>
+                <p>صدای ایرانیا را به جهان برسانید</p>
+                
+                <!-- Hot Campaigns Section - Clean Design -->
+                <section class="campaigns-section" id="campaignsSection" style="margin: 32px auto 48px; max-width: 1000px; padding: 0 16px;">
+                    <h3 style="text-align: center; margin-bottom: 24px; font-size: 18px; color: var(--text-secondary); font-weight: 500;">
+                        🔥 کمپین‌های آماده — با یک کلیک شروع کنید
+                    </h3>
+                    <div class="campaigns-grid" id="campaignsList"></div>
+                </section>
+                
+                <!-- Divider -->
+                <div style="text-align: center; margin: 32px 0; color: var(--text-muted); font-size: 14px;">
+                    ─────── یا ایمیل سفارشی بسازید ───────
                 </div>
-                <div class="campaigns-grid" id="campaignsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px;"></div>
+                
+                <!-- Custom Email Button -->
+                <div style="text-align: center;">
+                    <button class="btn btn-primary btn-large" id="startBtn" style="margin-bottom: 16px;">
+                        <span class="btn-icon">✨</span>
+                        ساخت ایمیل سفارشی
+                        <span class="btn-icon">←</span>
+                    </button>
+                    <p style="font-size: 13px; color: var(--text-secondary);">کشور، گیرندگان و موضوعات را خودتان انتخاب کنید</p>
+                </div>
+                
+                <p style="margin-top: 32px; font-size: 14px; color: var(--text-secondary);">
+                    ⚡ فقط ۵ دقیقه وقت می‌برد | 🔒 کاملاً امن و خصوصی | 🌟 بدون نیاز به ثبت‌نام
+                </p>
             </section>
 
             <!-- Campaign Stepper (Separate from Custom) -->
@@ -181,70 +201,6 @@
                         <span class="btn-icon">←</span>
                     </button>
                 </div>
-            </section>
-
-            <!-- Hero Section -->
-            <section class="hero">
-                <h1>وقتی متحد باشیم، جهان صدای ما را می‌شنود</h1>
-                <p>صدای ایرانیا را به جهان برسانید</p>
-                
-                <!-- Choice: Campaign or Custom -->
-                <div class="choice-section" id="choiceSection">
-                    <div class="choice-cards">
-                        <div class="choice-card" id="campaignChoice">
-                            <div class="choice-icon"><img src="https://raw.githubusercontent.com/twitter/twemoji/1c8cbe4759046657da043e897b0ab8105b443c80/assets/svg/1f1ee-1f1f7.svg" alt="Iran" style="width: 80px; height: 80px;"></div>
-                            <h3>استفاده از کمپین</h3>
-                            <p>از کمپین‌های آماده استفاده کنید</p>
-                            <button class="btn btn-secondary">کمپین‌ها را ببینید</button>
-                        </div>
-                        <div class="choice-card" id="customChoice">
-                            <div class="choice-icon">✨</div>
-                            <h3>ساخت ایمیل سفارشی</h3>
-                            <p>موضوعاتی که می‌خواهید در موردشان صحبت کنید را انتخاب کنید</p>
-                            <button class="btn btn-secondary">شروع کنید</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Visual Steps Preview (shown when custom choice is selected) -->
-                <div class="hero-steps" id="stepsPreview" style="display: none;">
-                    <button class="btn btn-text" id="backToChoiceCustom">← بازگشت به انتخاب</button>
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px;">
-                        <div class="hero-step">
-                            <div class="hero-step-icon">🌍</div>
-                            <div class="hero-step-title">انتخاب کشور</div>
-                            <div class="hero-step-desc">کشور مقصد برای ارسال ایمیل</div>
-                        </div>
-                        <div class="hero-step-arrow">→</div>
-                        <div class="hero-step">
-                            <div class="hero-step-icon">👥</div>
-                            <div class="hero-step-title">انتخاب گیرندگان</div>
-                            <div class="hero-step-desc">سیاستمداران را انتخاب کنید</div>
-                        </div>
-                        <div class="hero-step-arrow">→</div>
-                        <div class="hero-step">
-                            <div class="hero-step-icon">📝</div>
-                            <div class="hero-step-title">موضوعات</div>
-                            <div class="hero-step-desc">موضوعات حمایتی را انتخاب کنید</div>
-                        </div>
-                        <div class="hero-step-arrow">→</div>
-                        <div class="hero-step">
-                            <div class="hero-step-icon">✉️</div>
-                            <div class="hero-step-title">ارسال ایمیل</div>
-                            <div class="hero-step-desc">ایمیل خود را بفرستید</div>
-                        </div>
-                    </div>
-                    
-                    <button class="btn btn-primary btn-large" id="startBtn" style="margin-top: 24px;">
-                        <span class="btn-icon">🚀</span>
-                        شروع کمپین سفارشی
-                        <span class="btn-icon">←</span>
-                    </button>
-                </div>
-                
-                <p style="margin-top: 20px; font-size: 14px; color: var(--text-secondary);">
-                    ⚡ فقط ۵ دقیقه وقت می‌برد | 🔒 کاملاً امن و خصوصی | 🌟 بدون نیاز به ثبت‌نام
-                </p>
             </section>
 
             <!-- Stepper Form -->

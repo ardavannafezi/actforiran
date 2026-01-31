@@ -37,7 +37,7 @@ class TopicOut(BaseModel):
     slug: str
     display_title: str
     description: Optional[str] = None
-    country_code: Optional[str] = None
+    country_codes: Optional[List[str]] = []
 
 
 class TopicsResponse(BaseModel):
@@ -190,7 +190,7 @@ class AdvocacyTopicCreate(BaseModel):
     slug: str
     display_title: str
     description: Optional[str] = None
-    country_code: str
+    country_codes: List[str]  # Array of country codes - topics can belong to multiple countries
     recipient_ids: Optional[List[int]] = []
 
     _slug_no_html = validator("slug", allow_reuse=True)(_sanitize_text)
@@ -202,7 +202,7 @@ class AdvocacyTopicUpdate(BaseModel):
     slug: Optional[str] = None
     display_title: Optional[str] = None
     description: Optional[str] = None
-    country_code: Optional[str] = None
+    country_codes: Optional[List[str]] = None
     is_active: Optional[bool] = None
     recipient_ids: Optional[List[int]] = None
 
@@ -216,8 +216,8 @@ class AdvocacyTopicAdminOut(BaseModel):
     slug: str
     display_title: str
     description: Optional[str] = None
-    country_code: Optional[str] = None
-    country_name: Optional[str] = None
+    country_codes: Optional[List[str]] = []
+    country_names: Optional[List[str]] = []  # Names of all selected countries
     recipient_ids: Optional[List[int]] = []
     approval_status: str
     is_active: bool

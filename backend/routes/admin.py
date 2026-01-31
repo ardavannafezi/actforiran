@@ -594,14 +594,18 @@ async def list_topics(
     if approval_status:
         query = query.filter(AdvocacyTopic.approval_status == approval_status)
     topics = query.order_by(AdvocacyTopic.display_title).all()
+    
+    # Get all countries for name lookup
+    countries = {c.code: c.name for c in db.query(Country).all()}
+    
     return [
         {
             "id": t.id,
             "slug": t.slug,
             "display_title": t.display_title,
             "description": t.description,
-            "country_code": t.country_code,
-            "country_name": t.country.name if t.country else None,
+            "country_codes": t.country_codes or [],
+            "country_names": [countries.get(code, code) for code in (t.country_codes or [])],
             "recipient_ids": t.recipient_ids or [],
             "approval_status": t.approval_status,
             "is_active": t.is_active,
@@ -628,7 +632,7 @@ async def create_topic(
             slug=payload.slug,
             display_title=payload.display_title,
             description=payload.description,
-            country_code=payload.country_code,
+            country_codes=payload.country_codes,  # Array of country codes
             recipient_ids=payload.recipient_ids if hasattr(payload, 'recipient_ids') else [],
             approval_status=approval_status,
             created_by_admin_id=admin.id,
@@ -649,13 +653,16 @@ async def create_topic(
         )
         db.commit()
 
+        # Get country names
+        countries = {c.code: c.name for c in db.query(Country).all()}
+
         return {
             "id": topic.id,
             "slug": topic.slug,
             "display_title": topic.display_title,
             "description": topic.description,
-            "country_code": topic.country_code,
-            "country_name": topic.country.name if topic.country else None,
+            "country_codes": topic.country_codes or [],
+            "country_names": [countries.get(code, code) for code in (topic.country_codes or [])],
             "recipient_ids": topic.recipient_ids or [],
             "approval_status": topic.approval_status,
             "is_active": topic.is_active,
@@ -694,8 +701,8 @@ async def update_topic(
         topic.display_title = payload.display_title
     if payload.description is not None:
         topic.description = payload.description
-    if payload.country_code is not None:
-        topic.country_code = payload.country_code
+    if payload.country_codes is not None:
+        topic.country_codes = payload.country_codes
     if payload.is_active is not None:
         topic.is_active = payload.is_active
     if hasattr(payload, 'recipient_ids') and payload.recipient_ids is not None:
@@ -724,13 +731,16 @@ async def update_topic(
     )
     db.commit()
 
+    # Get country names
+    countries = {c.code: c.name for c in db.query(Country).all()}
+
     return {
         "id": topic.id,
         "slug": topic.slug,
         "display_title": topic.display_title,
         "description": topic.description,
-        "country_code": topic.country_code,
-        "country_name": topic.country.name if topic.country else None,
+        "country_codes": topic.country_codes or [],
+        "country_names": [countries.get(code, code) for code in (topic.country_codes or [])],
         "recipient_ids": topic.recipient_ids or [],
         "approval_status": topic.approval_status,
         "is_active": topic.is_active,
