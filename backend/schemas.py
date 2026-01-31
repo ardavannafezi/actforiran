@@ -53,8 +53,10 @@ class GenerateEmailRequest(BaseModel):
     is_resident: Optional[bool] = None
     user_name: Optional[str] = None
     campaign_id: Optional[int] = None  # Track which campaign was used
+    campaign_content: Optional[str] = None  # Pre-written campaign content (replaces topic selection)
 
     _user_name_no_html = validator("user_name", allow_reuse=True)(_sanitize_text)
+    _campaign_content_no_html = validator("campaign_content", allow_reuse=True)(_sanitize_text)
 
 
 class RecipientEmailOut(BaseModel):

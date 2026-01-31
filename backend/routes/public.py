@@ -218,26 +218,43 @@ async def generate_email_endpoint(
         if len(recipients) != len(payload.recipient_ids):
             raise HTTPException(status_code=400, detail="One or more recipients are invalid")
 
-        topics = (
-            db.query(AdvocacyTopic)
-            .filter(AdvocacyTopic.id.in_(payload.topic_ids))
-            .filter(AdvocacyTopic.approval_status == "approved")
-            .filter(AdvocacyTopic.is_active.is_(True))
-            .all()
-        )
-        if len(topics) != len(payload.topic_ids):
-            raise HTTPException(status_code=400, detail="One or more topics are invalid")
+        # If campaign_content is provided, use it as the topic (for campaigns with pre-written content)
+        # Otherwise, fetch topics from database
+        if payload.campaign_content:
+            # Campaign mode: use the campaign's description as the topic
+            topics_payload = [
+                {
+                    "id": 0,
+                    "display_title": "Campaign Topic",
+                    "description": payload.campaign_content,
+                    "requested_action": "",
+                    "sources": [],
+                }
+            ]
+        elif payload.topic_ids:
+            # Custom email mode: fetch topics from database
+            topics = (
+                db.query(AdvocacyTopic)
+                .filter(AdvocacyTopic.id.in_(payload.topic_ids))
+                .filter(AdvocacyTopic.approval_status == "approved")
+                .filter(AdvocacyTopic.is_active.is_(True))
+                .all()
+            )
+            if len(topics) != len(payload.topic_ids):
+                raise HTTPException(status_code=400, detail="One or more topics are invalid")
 
-        topics_payload = [
-            {
-                "id": t.id,
-                "display_title": t.display_title,
-                "description": t.description or "",
-                "requested_action": "",
-                "sources": [],
-            }
-            for t in topics
-        ]
+            topics_payload = [
+                {
+                    "id": t.id,
+                    "display_title": t.display_title,
+                    "description": t.description or "",
+                    "requested_action": "",
+                    "sources": [],
+                }
+                for t in topics
+            ]
+        else:
+            raise HTTPException(status_code=400, detail="Either topic_ids or campaign_content must be provided")
 
         token_usage = 0
         sender_citizenship_status = payload.sender_citizenship_status

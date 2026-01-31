@@ -25,9 +25,10 @@ const state = {
     recipientsHasMore: true,
     selectedCampaign: null,
     campaignMode: false,
+    campaignDescription: null, // Campaign's pre-written content
     // Campaign-specific state
     campaignCurrentStep: 1,
-    campaignTotalSteps: 4,
+    campaignTotalSteps: 3,
     campaignRecipients: [], // All recipients for the campaign
     generatedEmail: {
         groups: []
@@ -519,6 +520,7 @@ async function selectCampaign(campaignId) {
     state.campaignMode = true;
     state.selectedCampaign = campaign.id;
     state.campaignCurrentStep = 1;
+    state.campaignDescription = campaign.description || ''; // Store campaign's pre-written content
     
     // Reset selections
     state.selectedRecipients = new Set(campaign.recipient_ids || []);
@@ -541,9 +543,6 @@ async function selectCampaign(campaignId) {
     
     // Load ALL recipients for this campaign (not filtered by country)
     await loadCampaignRecipients(campaign.recipient_ids || []);
-    
-    // Load ALL topics (user will choose)
-    await loadCampaignTopics();
     
     // Load countries for citizenship dropdown
     await loadCountriesForCampaign();
@@ -759,13 +758,8 @@ async function handleCampaignNextStep() {
             showNotification('کشور شهروندی/اقامت خود را انتخاب کنید', 'error');
             return;
         }
-    } else if (step === 3) {
-        // Topics step
-        if (state.selectedTopics.size === 0) {
-            showNotification('یک موضوع انتخاب کنید', 'error');
-            return;
-        }
     }
+    // Step 3 is email - no validation needed, just generate
     
     if (step < state.campaignTotalSteps) {
         goToCampaignStep(step + 1);
@@ -789,13 +783,15 @@ async function generateCampaignEmail() {
         countryCode = state.campaignRecipients[0].country_code || 'USA';
     }
     
+    // For campaigns, we don't use topic_ids - the campaign has its own description
     const payload = {
         country_code: countryCode,
         recipient_ids: Array.from(state.selectedRecipients),
-        topic_ids: Array.from(state.selectedTopics),
+        topic_ids: [], // Campaigns don't use topics
         sender_citizenship_status: state.citizenshipStatus,
         user_name: userName || null,
-        campaign_id: state.selectedCampaign || null
+        campaign_id: state.selectedCampaign || null,
+        campaign_content: state.campaignDescription || null // Pass campaign's pre-written content
     };
     if (state.citizenshipCountry) {
         payload.sender_citizenship_country_code = state.citizenshipCountry;

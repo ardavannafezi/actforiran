@@ -202,7 +202,8 @@ async function loadDashboardData() {
         loadCountries(),
         loadRoles(),
         loadRecipients(),
-        loadTopics()
+        loadTopics(),
+        loadCampaigns()
     ]);
 }
 
