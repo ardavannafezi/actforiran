@@ -156,6 +156,9 @@ async def create_admin(
     db: Session = Depends(get_db),
     admin: Administrator = Depends(require_super_admin),
 ):
+    if not payload.get("email") or not payload.get("password"):
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
     existing = db.query(Administrator).filter(Administrator.email == payload["email"]).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already exists")
@@ -1704,6 +1707,125 @@ async def delete_ticker_message(
     db.commit()
 
     return {"success": True, "message": "Ticker message deleted"}
+
+
+# ===============================
+# BULK IMPORT RECIPIENTS ROUTE
+# ===============================
+
+@router.post("/recipients/bulk-import")
+async def bulk_import_recipients(
+    payload: dict,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Administrator = Depends(require_super_admin),
+):
+    """
+    Bulk import political recipients.
+    Payload format:
+    {
+        "recipients": [
+            {
+                "full_name": "Name",
+                "email_address": "email@example.com",
+                "role": "MP",
+                "country_code": "GB",
+                "custom_title": "Optional title",
+                "is_active": true,
+                "approval_status": "approved"
+            },
+            ...
+        ],
+        "skip_duplicates": true  // Optional, default true
+    }
+    """
+    recipients_data = payload.get("recipients", [])
+    skip_duplicates = payload.get("skip_duplicates", True)
+    
+    if not recipients_data:
+        raise HTTPException(status_code=400, detail="No recipients provided")
+    
+    # Get or create roles
+    role_cache = {}
+    for role in db.query(RecipientRole).all():
+        role_cache[role.name.lower()] = role.id
+    
+    created_count = 0
+    skipped_count = 0
+    errors = []
+    
+    for idx, rec in enumerate(recipients_data):
+        try:
+            email = rec.get("email_address", "").strip()
+            full_name = rec.get("full_name", "").strip()
+            role_name = rec.get("role", "").strip()
+            country_code = rec.get("country_code", "GB").strip().upper()
+            custom_title = rec.get("custom_title", "").strip() or None
+            is_active = rec.get("is_active", True)
+            approval_status = rec.get("approval_status", "approved")
+            
+            # Skip if no valid email
+            if not email or email == "0" or "@" not in email:
+                skipped_count += 1
+                continue
+            
+            # Skip if no name
+            if not full_name:
+                skipped_count += 1
+                continue
+            
+            # Check for duplicate by email
+            if skip_duplicates:
+                existing = db.query(PoliticalRecipient).filter(
+                    PoliticalRecipient.email_address == email
+                ).first()
+                if existing:
+                    skipped_count += 1
+                    continue
+            
+            # Get or create role
+            role_id = None
+            if role_name:
+                role_key = role_name.lower()
+                if role_key in role_cache:
+                    role_id = role_cache[role_key]
+                else:
+                    # Create new role
+                    new_role = RecipientRole(name=role_name, is_active=True)
+                    db.add(new_role)
+                    db.flush()
+                    role_cache[role_key] = new_role.id
+                    role_id = new_role.id
+            
+            # Create recipient
+            new_recipient = PoliticalRecipient(
+                full_name=full_name,
+                email_address=email,
+                role_id=role_id,
+                custom_title=custom_title,
+                country_code=country_code,
+                is_active=is_active,
+                approval_status=approval_status,
+            )
+            db.add(new_recipient)
+            created_count += 1
+            
+        except Exception as e:
+            errors.append(f"Row {idx + 1}: {str(e)}")
+    
+    db.commit()
+    
+    log_action(db, admin, "BULK_IMPORT_RECIPIENTS", "political_recipient", None, 
+               {"created": created_count, "skipped": skipped_count, "errors": len(errors)}, request)
+    db.commit()
+    
+    return {
+        "success": True,
+        "created": created_count,
+        "skipped": skipped_count,
+        "errors": errors[:20] if errors else [],  # Return first 20 errors
+        "total_errors": len(errors)
+    }
 
 
 @router.get("/analytics")
