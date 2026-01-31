@@ -321,6 +321,48 @@ async def generate_email_endpoint(
                 "mailto_link": mailto_link,
             })
 
+        # Log the email generation to database
+        try:
+            # Get sender country from IP
+            sender_country_code = None
+            sender_country_name = None
+            client_ip = request.headers.get('X-Forwarded-For', '').split(',')[0].strip() or (request.client.host if request.client else None)
+            if client_ip and client_ip not in ["127.0.0.1", "localhost", "::1"]:
+                try:
+                    async with httpx.AsyncClient(timeout=3.0) as http_client:
+                        ip_response = await http_client.get(f"https://ipapi.co/{client_ip}/json/")
+                        if ip_response.status_code == 200:
+                            ip_data = ip_response.json()
+                            sender_country_code = ip_data.get("country_code")
+                            sender_country_name = ip_data.get("country_name")
+                except Exception:
+                    pass
+            
+            log_entry = EmailGenerationLog(
+                campaign_id=payload.campaign_id,
+                sender_ip_address=client_ip,
+                sender_country_code=sender_country_code,
+                sender_country_name=sender_country_name,
+                sender_user_name=payload.user_name,
+                sender_citizenship_status=sender_citizenship_status,
+                is_country_resident=sender_citizenship_status == "selected_country_citizen",
+                selected_recipient_country=country.name,
+                recipient_ids=payload.recipient_ids,
+                topic_ids=payload.topic_ids if payload.topic_ids else [],
+                generated_subject=groups[0]["subject"] if groups else None,
+                generated_body=(groups[0]["body"][:500] + "...") if groups and groups[0]["body"] and len(groups[0]["body"]) > 500 else (groups[0]["body"] if groups else None),
+                generation_successful=True,
+                error_message=None,
+                ai_model_used=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+                ai_tokens_used=token_usage,
+            )
+            db.add(log_entry)
+            db.commit()
+            print(f"✅ Logged email generation: {len(groups)} groups, {len(payload.recipient_ids)} recipients")
+        except Exception as log_error:
+            print(f"⚠️ Failed to log email generation: {str(log_error)}")
+            # Don't fail the request if logging fails
+
         return {"groups": groups}
     
     except HTTPException:
@@ -349,16 +391,21 @@ async def log_email_send(
 
     sender_country_code = None
     sender_country_name = None
-    client_ip = request.client.host if request.client else None
-    if client_ip and client_ip not in ["127.0.0.1", "localhost"]:
+    # Get real client IP - check X-Forwarded-For header for proxied requests
+    client_ip = request.headers.get('X-Forwarded-For', '').split(',')[0].strip() or (request.client.host if request.client else None)
+    if client_ip and client_ip not in ["127.0.0.1", "localhost", "::1"]:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(f"https://ipapi.co/{client_ip}/json/")
-                data = response.json()
-                sender_country_code = data.get("country_code")
-                sender_country_name = data.get("country_name")
-        except Exception:
-            pass
+                if response.status_code == 200:
+                    data = response.json()
+                    sender_country_code = data.get("country_code")
+                    sender_country_name = data.get("country_name")
+                    print(f"✅ IP lookup success: {client_ip} -> {sender_country_name} ({sender_country_code})")
+                else:
+                    print(f"⚠️ IP lookup failed with status {response.status_code} for IP: {client_ip}")
+        except Exception as e:
+            print(f"⚠️ IP lookup error for {client_ip}: {str(e)}")
 
     log_entry = EmailGenerationLog(
         campaign_id=payload.campaign_id,

@@ -55,7 +55,6 @@ const elements = {
     campaignPrevBtn: document.getElementById('campaignPrevBtn'),
     campaignNextBtn: document.getElementById('campaignNextBtn'),
     campaignRecipientsList: document.getElementById('campaignRecipientsList'),
-    campaignTopicsList: document.getElementById('campaignTopicsList'),
     campaignUserName: document.getElementById('campaignUserName'),
     campaignEmailGroups: document.getElementById('campaignEmailGroups')
 };
@@ -132,8 +131,10 @@ function initStepper() {
             state.selectedCampaign = null;
             updateCitizenshipCountryVisibility();
             document.querySelector('.hero').style.display = 'none';
+            elements.stepperContainer.style.display = 'block';
             elements.stepperContainer.classList.add('active');
             loadCountries();
+            goToStep(1);
             // Topics will be loaded when user selects a country
         };
     }
@@ -626,60 +627,7 @@ function toggleCampaignRecipient(id) {
     renderCampaignRecipients();
 }
 
-async function loadCampaignTopics() {
-    const list = document.getElementById('campaignTopicsList');
-    if (!list) return;
-    
-    list.innerHTML = '<div class="loading">در حال بارگذاری موضوعات...</div>';
-    
-    try {
-        // Load ALL topics (no country filter for campaigns)
-        const response = await fetch(`${API_BASE}/api/v1/topics`);
-        if (!response.ok) throw new Error('Failed to load topics');
-        
-        const data = await response.json();
-        const topics = data.topics || [];
-        
-        renderCampaignTopics(topics);
-        
-    } catch (error) {
-        console.error('Error loading campaign topics:', error);
-        list.innerHTML = '<div class="loading">خطا در بارگذاری موضوعات</div>';
-    }
-}
-
-function renderCampaignTopics(topics) {
-    const list = document.getElementById('campaignTopicsList');
-    if (!list) return;
-    
-    if (!topics || topics.length === 0) {
-        list.innerHTML = '<div class="loading">موضوعی یافت نشد</div>';
-        return;
-    }
-    
-    list.innerHTML = topics.map(t => `
-        <label class="checkbox-item ${state.selectedTopics.has(t.id) ? 'selected' : ''}" data-id="${t.id}">
-            <input type="radio" name="campaign_topic" ${state.selectedTopics.has(t.id) ? 'checked' : ''} onchange="selectCampaignTopic(${t.id})">
-            <div class="checkbox-content">
-                <span class="checkbox-title">${t.display_title}</span>
-                <span class="checkbox-subtitle">${t.description || ''}</span>
-            </div>
-        </label>
-    `).join('');
-}
-
-function selectCampaignTopic(id) {
-    state.selectedTopics.clear();
-    state.selectedTopics.add(id);
-    // Re-render to show selection
-    const list = document.getElementById('campaignTopicsList');
-    if (list) {
-        list.querySelectorAll('.checkbox-item').forEach(item => {
-            const itemId = parseInt(item.dataset.id);
-            item.classList.toggle('selected', itemId === id);
-        });
-    }
-}
+// Campaign topics functions removed - campaigns use pre-written content from description
 
 async function loadCountriesForCampaign() {
     try {
@@ -1263,22 +1211,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification('خطا در راه‌اندازی', 'error');
     }
     
-    // Test button click manually (Safari compatibility fallback)
+    // Start button handler is set up in initStepper, no need to duplicate here
     if (elements.startBtn) {
-        console.log('✅ Start button found, adding listener...');
-        elements.startBtn.onclick = function() {
-            console.log('🎯 Start button clicked!');
-            try {
-                document.querySelector('.hero').style.display = 'none';
-                elements.stepperContainer.classList.add('active');
-                loadCountries();
-                // Topics will be loaded when user selects a country
-                showNotification('خوش آمدید! لطفاً کشور را انتخاب کنید', 'success');
-            } catch (error) {
-                console.error('❌ Error in start button handler:', error);
-                showNotification('خطا در شروع کمپین', 'error');
-            }
-        };
+        console.log('✅ Start button found');
     } else {
         console.error('❌ Start button not found!');
     }
