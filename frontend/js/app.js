@@ -24,7 +24,11 @@ const state = {
     recipientsPageSize: 30,
     recipientsHasMore: true,
     selectedCampaign: null,
-    campaignMode: false, // Track if user started from campaign
+    campaignMode: false,
+    // Campaign-specific state
+    campaignCurrentStep: 1,
+    campaignTotalSteps: 4,
+    campaignRecipients: [], // All recipients for the campaign
     generatedEmail: {
         groups: []
     }
@@ -43,7 +47,16 @@ const elements = {
     userName: document.getElementById('userName'),
     emailGroups: document.getElementById('emailGroups'),
     citizenshipCountryGroup: document.getElementById('citizenshipCountryGroup'),
-    citizenshipCountrySelect: document.getElementById('citizenshipCountrySelect')
+    citizenshipCountrySelect: document.getElementById('citizenshipCountrySelect'),
+    // Campaign-specific elements
+    campaignStepperContainer: document.getElementById('campaignStepperContainer'),
+    campaignProgressFill: document.getElementById('campaignProgressFill'),
+    campaignPrevBtn: document.getElementById('campaignPrevBtn'),
+    campaignNextBtn: document.getElementById('campaignNextBtn'),
+    campaignRecipientsList: document.getElementById('campaignRecipientsList'),
+    campaignTopicsList: document.getElementById('campaignTopicsList'),
+    campaignUserName: document.getElementById('campaignUserName'),
+    campaignEmailGroups: document.getElementById('campaignEmailGroups')
 };
 
 // ============================================
@@ -154,6 +167,45 @@ function initStepper() {
 
     if (elements.citizenshipCountrySelect) {
         elements.citizenshipCountrySelect.onchange = function(e) {
+            state.citizenshipCountry = e.target.value || null;
+        };
+    }
+    
+    // ============================================
+    // CAMPAIGN STEPPER SETUP
+    // ============================================
+    const backFromCampaign = document.getElementById('backFromCampaign');
+    if (backFromCampaign) {
+        backFromCampaign.onclick = function() {
+            exitCampaignMode();
+        };
+    }
+    
+    if (elements.campaignPrevBtn) {
+        elements.campaignPrevBtn.onclick = function(e) {
+            e.preventDefault();
+            goToCampaignStep(state.campaignCurrentStep - 1);
+        };
+    }
+    
+    if (elements.campaignNextBtn) {
+        elements.campaignNextBtn.onclick = function(e) {
+            e.preventDefault();
+            handleCampaignNextStep();
+        };
+    }
+    
+    // Campaign citizenship radio buttons
+    document.querySelectorAll('input[name=\"campaign_citizenship_status\"]').forEach(radio => {
+        radio.onclick = function(e) {
+            state.citizenshipStatus = e.target.value;
+            updateCampaignCitizenshipVisibility();
+        };
+    });
+    
+    const campaignCitizenshipSelect = document.getElementById('campaignCitizenshipCountrySelect');
+    if (campaignCitizenshipSelect) {
+        campaignCitizenshipSelect.onchange = function(e) {
             state.citizenshipCountry = e.target.value || null;
         };
     }
@@ -406,6 +458,7 @@ function renderCampaigns() {
     const campaignsList = document.getElementById('campaignsList');
     
     if (!state.campaigns || state.campaigns.length === 0) {
+        if (campaignsSection) campaignsSection.style.display = 'none';
         return;
     }
     
@@ -413,31 +466,29 @@ function renderCampaigns() {
     let hotCampaigns = state.campaigns
         .filter(c => (c.is_hot !== false) && (c.is_active !== false))
         .sort((a, b) => a.display_order - b.display_order)
-        .slice(0, 5);
+        .slice(0, 6);
 
     if (hotCampaigns.length === 0) {
         hotCampaigns = state.campaigns
             .filter(c => c.is_active !== false)
             .sort((a, b) => a.display_order - b.display_order)
-            .slice(0, 5);
+            .slice(0, 6);
     }
 
     if (hotCampaigns.length === 0) {
-        campaignsSection.style.display = 'block';
-        campaignsList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 24px;">فعلاً کمپین فعالی ثبت نشده است</p>';
+        if (campaignsSection) campaignsSection.style.display = 'none';
         return;
     }
     
-    // Always show campaigns section
-    campaignsSection.style.display = 'block';
+    // Show campaigns section with new design
+    if (campaignsSection) campaignsSection.style.display = 'block';
     
     campaignsList.innerHTML = hotCampaigns.map(campaign => `
         <div class="campaign-card" onclick="selectCampaign(${campaign.id})" data-campaign-id="${campaign.id}">
             <div class="campaign-header">
-                <div class="campaign-icon">${campaign.icon}</div>
+                <div class="campaign-icon">${campaign.icon || '🔥'}</div>
                 <div class="campaign-info">
                     <div class="campaign-title">${campaign.title}</div>
-                    <div class="campaign-country"></div>
                 </div>
             </div>
             <div class="campaign-description">${campaign.description || ''}</div>
@@ -447,10 +498,17 @@ function renderCampaigns() {
                     <span>${(campaign.recipient_ids || []).length} گیرنده</span>
                 </div>
             </div>
+            <div class="campaign-cta">
+                <span>شروع کمپین</span>
+                <span>←</span>
+            </div>
         </div>
     `).join('');
 }
 
+// ============================================
+// CAMPAIGN STEPPER FLOW (Separate from Custom)
+// ============================================
 async function selectCampaign(campaignId) {
     const campaign = state.campaigns.find(c => c.id === campaignId);
     if (!campaign) return;
@@ -460,55 +518,388 @@ async function selectCampaign(campaignId) {
     // Set campaign mode
     state.campaignMode = true;
     state.selectedCampaign = campaign.id;
+    state.campaignCurrentStep = 1;
     
-    // Pre-fill selections - campaigns only have recipients now
+    // Reset selections
     state.selectedRecipients = new Set(campaign.recipient_ids || []);
-    state.selectedTopics = new Set(); // User will select topics
+    state.selectedTopics = new Set();
+    state.citizenshipStatus = null;
     state.citizenshipCountry = null;
     
-    // Hide hero, show stepper
+    // Hide main content and show campaign stepper
     document.querySelector('.hero').style.display = 'none';
-    elements.stepperContainer.classList.add('active');
-    showNotification('در حال آماده‌سازی کمپین...', 'info');
+    document.getElementById('campaignsSection').style.display = 'none';
+    document.querySelector('.info-section')?.style.setProperty('display', 'none');
+    elements.stepperContainer.style.display = 'none';
+    elements.campaignStepperContainer.style.display = 'block';
     
-    // Load countries first
-    await loadCountries();
+    // Update campaign banner
+    document.getElementById('campaignBannerIcon').textContent = campaign.icon || '🔥';
+    document.getElementById('campaignBannerTitle').textContent = campaign.title;
+    document.getElementById('campaignBannerDesc').textContent = campaign.description || '';
+    document.getElementById('campaignRecipientCount').textContent = toPersian((campaign.recipient_ids || []).length);
     
-    // For campaigns, we need to get recipient details to determine country
-    // Load all recipients info and find the country from first recipient
+    // Load ALL recipients for this campaign (not filtered by country)
+    await loadCampaignRecipients(campaign.recipient_ids || []);
+    
+    // Load ALL topics (user will choose)
+    await loadCampaignTopics();
+    
+    // Load countries for citizenship dropdown
+    await loadCountriesForCampaign();
+    
+    // Go to step 1
+    goToCampaignStep(1);
+    
+    showNotification(`کمپین "${campaign.title}" انتخاب شد`, 'success');
+}
+
+async function loadCampaignRecipients(recipientIds) {
+    const list = document.getElementById('campaignRecipientsList');
+    if (!list) return;
+    
+    list.innerHTML = '<div class="loading">در حال بارگذاری گیرندگان...</div>';
+    
     try {
-        const recipientIds = campaign.recipient_ids || [];
-        if (recipientIds.length > 0) {
-            // Get first recipient's country
-            const response = await fetch(`${API_BASE}/api/v1/recipients`);
-            if (response.ok) {
-                const data = await response.json();
-                const recipients = data.recipients || [];
-                const firstRecipient = recipients.find(r => recipientIds.includes(r.id));
-                if (firstRecipient && firstRecipient.country_code) {
-                    state.selectedCountry = firstRecipient.country_code;
-                    if (elements.countrySelect) {
-                        elements.countrySelect.value = state.selectedCountry;
-                    }
-                    // Load recipients for this country
-                    await handleCountryChange({ target: { value: state.selectedCountry } }, true);
-                }
-            }
+        // Load all recipients
+        const response = await fetch(`${API_BASE}/api/v1/recipients`);
+        if (!response.ok) throw new Error('Failed to load recipients');
+        
+        const data = await response.json();
+        const allRecipients = data.recipients || [];
+        
+        // Filter to only campaign recipients
+        state.campaignRecipients = allRecipients.filter(r => recipientIds.includes(r.id));
+        
+        // Render with all pre-selected
+        renderCampaignRecipients();
+        
+    } catch (error) {
+        console.error('Error loading campaign recipients:', error);
+        list.innerHTML = '<div class="loading">خطا در بارگذاری گیرندگان</div>';
+    }
+}
+
+function renderCampaignRecipients() {
+    const list = document.getElementById('campaignRecipientsList');
+    if (!list) return;
+    
+    if (!state.campaignRecipients || state.campaignRecipients.length === 0) {
+        list.innerHTML = '<div class="loading">گیرنده‌ای یافت نشد</div>';
+        return;
+    }
+    
+    // Group by country
+    const byCountry = {};
+    state.campaignRecipients.forEach(r => {
+        const country = r.country_name || r.country_code || 'سایر';
+        if (!byCountry[country]) byCountry[country] = [];
+        byCountry[country].push(r);
+    });
+    
+    let html = '';
+    Object.entries(byCountry).forEach(([country, recipients]) => {
+        html += `<div class="recipient-group" style="margin-bottom: 16px;">
+            <h4 style="color: var(--primary); margin-bottom: 8px; font-size: 14px;">🌍 ${country}</h4>`;
+        recipients.forEach(r => {
+            const isChecked = state.selectedRecipients.has(r.id);
+            html += `
+                <label class="checkbox-item ${isChecked ? 'selected' : ''}" data-id="${r.id}">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleCampaignRecipient(${r.id})">
+                    <div class="checkbox-content">
+                        <span class="checkbox-title">${r.full_name}</span>
+                        <span class="checkbox-subtitle">${r.display_title || r.role_name || ''}</span>
+                    </div>
+                </label>`;
+        });
+        html += '</div>';
+    });
+    
+    list.innerHTML = html;
+}
+
+function toggleCampaignRecipient(id) {
+    if (state.selectedRecipients.has(id)) {
+        state.selectedRecipients.delete(id);
+    } else {
+        state.selectedRecipients.add(id);
+    }
+    renderCampaignRecipients();
+}
+
+async function loadCampaignTopics() {
+    const list = document.getElementById('campaignTopicsList');
+    if (!list) return;
+    
+    list.innerHTML = '<div class="loading">در حال بارگذاری موضوعات...</div>';
+    
+    try {
+        // Load ALL topics (no country filter for campaigns)
+        const response = await fetch(`${API_BASE}/api/v1/topics`);
+        if (!response.ok) throw new Error('Failed to load topics');
+        
+        const data = await response.json();
+        const topics = data.topics || [];
+        
+        renderCampaignTopics(topics);
+        
+    } catch (error) {
+        console.error('Error loading campaign topics:', error);
+        list.innerHTML = '<div class="loading">خطا در بارگذاری موضوعات</div>';
+    }
+}
+
+function renderCampaignTopics(topics) {
+    const list = document.getElementById('campaignTopicsList');
+    if (!list) return;
+    
+    if (!topics || topics.length === 0) {
+        list.innerHTML = '<div class="loading">موضوعی یافت نشد</div>';
+        return;
+    }
+    
+    list.innerHTML = topics.map(t => `
+        <label class="checkbox-item ${state.selectedTopics.has(t.id) ? 'selected' : ''}" data-id="${t.id}">
+            <input type="radio" name="campaign_topic" ${state.selectedTopics.has(t.id) ? 'checked' : ''} onchange="selectCampaignTopic(${t.id})">
+            <div class="checkbox-content">
+                <span class="checkbox-title">${t.display_title}</span>
+                <span class="checkbox-subtitle">${t.description || ''}</span>
+            </div>
+        </label>
+    `).join('');
+}
+
+function selectCampaignTopic(id) {
+    state.selectedTopics.clear();
+    state.selectedTopics.add(id);
+    // Re-render to show selection
+    const list = document.getElementById('campaignTopicsList');
+    if (list) {
+        list.querySelectorAll('.checkbox-item').forEach(item => {
+            const itemId = parseInt(item.dataset.id);
+            item.classList.toggle('selected', itemId === id);
+        });
+    }
+}
+
+async function loadCountriesForCampaign() {
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/countries`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const countries = data.countries || [];
+        
+        const select = document.getElementById('campaignCitizenshipCountrySelect');
+        if (select) {
+            select.innerHTML = '<option value="">انتخاب کنید...</option>' +
+                countries.map(c => `<option value="${c.code}">${c.flag || ''} ${c.name_persian || c.name}</option>`).join('');
         }
     } catch (error) {
-        console.error('Error determining campaign country:', error);
+        console.error('Error loading countries for campaign:', error);
     }
+}
 
-    // Ensure campaign selections are applied after recipients load
-    state.selectedRecipients = new Set(campaign.recipient_ids || []);
-    renderRecipients();
-    renderTopics();
+function updateCampaignCitizenshipVisibility() {
+    const group = document.getElementById('campaignCitizenshipCountryGroup');
+    if (!group) return;
+    group.style.display = state.citizenshipStatus === 'selected_country_citizen' ? 'block' : 'none';
+}
 
-    // Jump to step 2 (recipients step) - user may want to adjust or select topics
-    goToStep(2);
-    updateCitizenshipCountryVisibility();
+function goToCampaignStep(step) {
+    if (step < 1 || step > state.campaignTotalSteps) return;
     
-    showNotification(`کمپین "${campaign.title}" انتخاب شد - لطفاً موضوعات را انتخاب کنید`, 'info');
+    state.campaignCurrentStep = step;
+    
+    // Update progress bar
+    const progress = ((step - 1) / (state.campaignTotalSteps - 1)) * 100;
+    const progressFill = document.getElementById('campaignProgressFill');
+    if (progressFill) progressFill.style.width = `${progress}%`;
+    
+    // Update step indicators
+    const container = elements.campaignStepperContainer;
+    if (container) {
+        container.querySelectorAll('.step-indicator').forEach((indicator, i) => {
+            indicator.classList.toggle('active', i + 1 <= step);
+            indicator.classList.toggle('completed', i + 1 < step);
+        });
+        
+        // Update step panels
+        container.querySelectorAll('.step-panel').forEach((panel, i) => {
+            panel.classList.toggle('active', i + 1 === step);
+        });
+    }
+    
+    // Update navigation buttons
+    if (elements.campaignPrevBtn) {
+        elements.campaignPrevBtn.disabled = step === 1;
+    }
+    if (elements.campaignNextBtn) {
+        elements.campaignNextBtn.textContent = step === state.campaignTotalSteps ? 'تولید ایمیل ←' : 'بعدی ←';
+    }
+}
+
+async function handleCampaignNextStep() {
+    const step = state.campaignCurrentStep;
+    
+    // Validation for each step
+    if (step === 1) {
+        // Recipients step
+        if (state.selectedRecipients.size === 0) {
+            showNotification('حداقل یک گیرنده انتخاب کنید', 'error');
+            return;
+        }
+    } else if (step === 2) {
+        // Citizenship step
+        if (!state.citizenshipStatus) {
+            showNotification('وضعیت شهروندی خود را مشخص کنید', 'error');
+            return;
+        }
+        if (state.citizenshipStatus === 'selected_country_citizen' && !state.citizenshipCountry) {
+            showNotification('کشور شهروندی/اقامت خود را انتخاب کنید', 'error');
+            return;
+        }
+    } else if (step === 3) {
+        // Topics step
+        if (state.selectedTopics.size === 0) {
+            showNotification('یک موضوع انتخاب کنید', 'error');
+            return;
+        }
+    }
+    
+    if (step < state.campaignTotalSteps) {
+        goToCampaignStep(step + 1);
+    } else {
+        // Generate email
+        await generateCampaignEmail();
+    }
+}
+
+async function generateCampaignEmail() {
+    const emailGroups = document.getElementById('campaignEmailGroups');
+    if (!emailGroups) return;
+    
+    emailGroups.innerHTML = '<div class="loading">در حال تولید ایمیل با هوش مصنوعی...</div>';
+    
+    const userName = document.getElementById('campaignUserName')?.value?.trim() || '';
+    
+    // Determine country from first recipient
+    let countryCode = 'USA'; // Default
+    if (state.campaignRecipients.length > 0) {
+        countryCode = state.campaignRecipients[0].country_code || 'USA';
+    }
+    
+    const payload = {
+        country_code: countryCode,
+        recipient_ids: Array.from(state.selectedRecipients),
+        topic_ids: Array.from(state.selectedTopics),
+        sender_citizenship_status: state.citizenshipStatus,
+        user_name: userName || null,
+        campaign_id: state.selectedCampaign || null
+    };
+    if (state.citizenshipCountry) {
+        payload.sender_citizenship_country_code = state.citizenshipCountry;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/generate-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to generate email');
+        }
+        
+        const data = await response.json();
+        state.generatedEmail.groups = data.groups || [];
+        
+        renderCampaignEmailGroups();
+        
+    } catch (error) {
+        console.error('Error generating email:', error);
+        emailGroups.innerHTML = `<div class="error-message">خطا در تولید ایمیل: ${error.message}</div>`;
+    }
+}
+
+function renderCampaignEmailGroups() {
+    const container = document.getElementById('campaignEmailGroups');
+    if (!container) return;
+    
+    if (!state.generatedEmail.groups || state.generatedEmail.groups.length === 0) {
+        container.innerHTML = '<div class="loading">ایمیلی تولید نشد</div>';
+        return;
+    }
+    
+    container.innerHTML = state.generatedEmail.groups.map((group, i) => {
+        const recipientEmails = group.recipients.map(r => r.email).join(',');
+        const mailtoLink = `mailto:${recipientEmails}?subject=${encodeURIComponent(group.subject)}&body=${encodeURIComponent(group.body)}`;
+        
+        return `
+            <div class="email-group-card">
+                <div class="email-group-header">
+                    <span class="email-group-number">گروه ${toPersian(i + 1)}</span>
+                    <span class="email-group-count">${toPersian(group.recipients.length)} گیرنده</span>
+                </div>
+                <div class="email-recipients">
+                    ${group.recipients.map(r => `<span class="recipient-chip">${r.name}</span>`).join('')}
+                </div>
+                <div class="email-preview">
+                    <div class="email-subject"><strong>موضوع:</strong> ${group.subject}</div>
+                    <div class="email-body">${group.body.replace(/\\n/g, '<br>')}</div>
+                </div>
+                <div class="email-actions">
+                    <a href="${mailtoLink}" class="btn btn-primary" target="_blank">
+                        <span>📧</span>
+                        ارسال ایمیل
+                    </a>
+                    <button class="btn btn-secondary" onclick="copyCampaignEmailToClipboard(${i})">
+                        <span>📋</span>
+                        کپی متن
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function copyCampaignEmailToClipboard(groupIndex) {
+    const group = state.generatedEmail.groups[groupIndex];
+    if (!group) return;
+    
+    const text = `Subject: ${group.subject}\\n\\n${group.body}`;
+    navigator.clipboard.writeText(text).then(() => {
+        showNotification('متن ایمیل کپی شد!', 'success');
+    }).catch(() => {
+        showNotification('خطا در کپی متن', 'error');
+    });
+}
+
+function exitCampaignMode() {
+    state.campaignMode = false;
+    state.selectedCampaign = null;
+    state.selectedRecipients.clear();
+    state.selectedTopics.clear();
+    state.citizenshipStatus = null;
+    state.citizenshipCountry = null;
+    state.campaignCurrentStep = 1;
+    
+    // Show main content, hide campaign stepper
+    document.querySelector('.hero').style.display = 'block';
+    document.getElementById('campaignsSection').style.display = 'block';
+    document.querySelectorAll('.info-section').forEach(s => s.style.display = 'grid');
+    elements.campaignStepperContainer.style.display = 'none';
+    elements.stepperContainer.classList.remove('active');
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toPersian(num) {
+    const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+    return num.toString().replace(/[0-9]/g, w => persianDigits[+w]);
 }
 
 async function generateEmail() {
