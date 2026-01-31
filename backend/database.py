@@ -1,4 +1,5 @@
 import os
+import re
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from passlib.context import CryptContext
@@ -234,8 +235,12 @@ def seed_defaults(db):
                 if len(parts) < 4:
                     continue
                 _, role_group, full_name, email = parts[0], parts[1], parts[2], parts[3]
-                if not email or email == "0" or "http" in email or "@" not in email:
+                if not email or email == "0":
                     continue
+                match = re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", email)
+                if not match:
+                    continue
+                email = match[0]
                 role = role_map.get(role_group) or mp_role or fm_ministry_role or fm_role
                 if not role:
                     continue

@@ -22,7 +22,7 @@ class CountriesResponse(BaseModel):
 class RecipientOut(BaseModel):
     id: int
     full_name: str
-    email_address: EmailStr
+    email_address: str
     display_title: str
     country_code: str
     country_name: str
@@ -61,7 +61,7 @@ class GenerateEmailRequest(BaseModel):
 
 class RecipientEmailOut(BaseModel):
     name: str
-    email: EmailStr
+    email: str
 
 
 class GenerateEmailResponse(BaseModel):
@@ -131,7 +131,7 @@ class AdminTokenResponse(BaseModel):
 
 class AdminMeResponse(BaseModel):
     id: int
-    email: EmailStr
+    email: str
     role: str
 
 
@@ -177,7 +177,7 @@ class PoliticalRecipientUpdate(BaseModel):
 class PoliticalRecipientAdminOut(BaseModel):
     id: int
     full_name: str
-    email_address: EmailStr
+    email_address: str
     role_id: int
     role_name: str
     custom_title: Optional[str] = None
