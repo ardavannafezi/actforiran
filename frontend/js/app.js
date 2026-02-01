@@ -485,27 +485,44 @@ function renderCampaigns() {
     // Show campaigns section with new design
     if (campaignsSection) campaignsSection.style.display = 'block';
     
-    campaignsList.innerHTML = hotCampaigns.map(campaign => `
-        <div class="campaign-card" onclick="selectCampaign(${campaign.id})" data-campaign-id="${campaign.id}">
+    campaignsList.innerHTML = hotCampaigns.map(campaign => {
+        const desc = campaign.description || '';
+        const isLong = desc.length > 100;
+        return `
+        <div class="campaign-card" data-campaign-id="${campaign.id}">
             <div class="campaign-header">
                 <div class="campaign-icon">${campaign.icon || '🔥'}</div>
                 <div class="campaign-info">
                     <div class="campaign-title">${campaign.title}</div>
                 </div>
             </div>
-            <div class="campaign-description">${campaign.description || ''}</div>
+            <div class="campaign-description" id="desc-${campaign.id}">${desc}</div>
+            ${isLong ? `<button class="read-more-btn" onclick="event.stopPropagation(); toggleReadMore(${campaign.id})">بیشتر بخوانید</button>` : ''}
             <div class="campaign-meta">
                 <div class="campaign-meta-item">
                     <span>👥</span>
                     <span>${(campaign.recipient_ids || []).length} گیرنده</span>
                 </div>
             </div>
-            <div class="campaign-cta">
+            <div class="campaign-cta" onclick="selectCampaign(${campaign.id})">
                 <span>شروع کمپین</span>
                 <span>←</span>
             </div>
         </div>
-    `).join('');
+    `}).join('');
+}
+
+// Toggle read more for campaign descriptions
+function toggleReadMore(campaignId) {
+    const desc = document.getElementById(`desc-${campaignId}`);
+    const btn = desc.nextElementSibling;
+    if (desc.classList.contains('expanded')) {
+        desc.classList.remove('expanded');
+        btn.textContent = 'بیشتر بخوانید';
+    } else {
+        desc.classList.add('expanded');
+        btn.textContent = 'کمتر';
+    }
 }
 
 // ============================================

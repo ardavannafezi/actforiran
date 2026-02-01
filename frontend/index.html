@@ -47,30 +47,32 @@
                 <p>صدای ایرانیا را به جهان برسانید</p>
                 
                 <!-- Hot Campaigns Section - Clean Design -->
-                <section class="campaigns-section" id="campaignsSection" style="margin: 32px auto 48px; max-width: 1000px; padding: 0 16px;">
-                    <h3 style="text-align: center; margin-bottom: 24px; font-size: 18px; color: var(--text-secondary); font-weight: 500;">
-                        🔥 کمپین‌های آماده — با یک کلیک شروع کنید
+                <section class="campaigns-section" id="campaignsSection" style="margin: 24px auto 32px; max-width: 1000px; padding: 0 8px;">
+                    <h3 class="campaigns-title" style="text-align: center; margin-bottom: 16px; font-size: 16px; color: var(--text-secondary); font-weight: 500;">
+                        🔥 کمپین‌های آماده
                     </h3>
                     <div class="campaigns-grid" id="campaignsList"></div>
                 </section>
                 
                 <!-- Divider -->
-                <div style="text-align: center; margin: 32px 0; color: var(--text-muted); font-size: 14px;">
-                    ─────── یا ایمیل سفارشی بسازید ───────
+                <div class="divider-line" style="text-align: center; margin: 24px 0; color: var(--text-muted); font-size: 13px;">
+                    ── یا ایمیل سفارشی بسازید ──
                 </div>
                 
                 <!-- Custom Email Button -->
                 <div style="text-align: center;">
-                    <button class="btn btn-primary btn-large" id="startBtn" style="margin-bottom: 16px;">
+                    <button class="btn btn-primary btn-large" id="startBtn" style="margin-bottom: 12px;">
                         <span class="btn-icon">✨</span>
                         ساخت ایمیل سفارشی
                         <span class="btn-icon">←</span>
                     </button>
-                    <p style="font-size: 13px; color: var(--text-secondary);">کشور، گیرندگان و موضوعات را خودتان انتخاب کنید</p>
+                    <p class="helper-text" style="font-size: 12px; color: var(--text-secondary);">کشور، گیرندگان و موضوعات را خودتان انتخاب کنید</p>
                 </div>
                 
-                <p style="margin-top: 32px; font-size: 14px; color: var(--text-secondary);">
-                    ⚡ فقط ۵ دقیقه وقت می‌برد | 🔒 کاملاً امن و خصوصی | 🌟 بدون نیاز به ثبت‌نام
+                <p class="info-badges" style="margin-top: 24px; font-size: 12px; color: var(--text-secondary); display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;">
+                    <span>⚡ فقط ۵ دقیقه</span>
+                    <span>🔒 امن و خصوصی</span>
+                    <span>🌟 بدون ثبت‌نام</span>
                 </p>
             </section>
 
@@ -78,13 +80,13 @@
             <section class="stepper-container campaign-stepper" id="campaignStepperContainer" style="display: none;">
                 <button class="btn btn-text" id="backFromCampaign" style="margin-bottom: 16px;">← بازگشت به صفحه اصلی</button>
                 
-                <div class="campaign-info-banner" id="campaignInfoBanner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 16px; margin-bottom: 24px; color: white;">
-                    <div style="display: flex; align-items: center; gap: 16px;">
-                        <span id="campaignBannerIcon" style="font-size: 48px;">🔥</span>
-                        <div>
-                            <h3 id="campaignBannerTitle" style="font-size: 24px; margin-bottom: 8px;">کمپین انتخاب شده</h3>
-                            <p id="campaignBannerDesc" style="opacity: 0.9; font-size: 14px;">توضیحات کمپین</p>
-                            <div id="campaignBannerStats" style="margin-top: 8px; font-size: 13px; opacity: 0.8;">
+                <div class="campaign-info-banner" id="campaignInfoBanner" style="background: var(--accent-red); padding: 20px; border-radius: 14px; margin-bottom: 20px; color: white;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <span id="campaignBannerIcon" style="font-size: 36px;">🔥</span>
+                        <div style="flex: 1; min-width: 200px;">
+                            <h3 id="campaignBannerTitle" style="font-size: 18px; margin-bottom: 4px; font-weight: 700;">کمپین انتخاب شده</h3>
+                            <p id="campaignBannerDesc" style="opacity: 0.9; font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">توضیحات کمپین</p>
+                            <div id="campaignBannerStats" style="margin-top: 6px; font-size: 12px; opacity: 0.85;">
                                 <span>👥 <span id="campaignRecipientCount">0</span> گیرنده</span>
                             </div>
                         </div>
